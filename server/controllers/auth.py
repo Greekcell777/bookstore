@@ -60,5 +60,22 @@ class Logout(Resource):
 class Register(Resource):
     def post(self):
         data = request.get_json()
+        
+        try:
+            user= User(
+                firstName=data.get('firstName'),
+                lastName=data.get('lastName'),
+                email=data.get('email'),
+                phone=data.get('phone')
+            )
 
+            user.password = data.get('password')
+
+            db.session.add(user)
+            db.session.commit()
+        
+        except:
+            return make_response({'error': 'Could not create user account.'})
+
+        return make_response(user.to_dict(), 201)
         
