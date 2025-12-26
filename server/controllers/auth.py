@@ -1,5 +1,6 @@
 from flask_jwt_extended import create_access_token, get_jwt_identity, set_access_cookies, unset_access_cookies, jwt_required
 from flask import request, make_response, jsonify
+import re
 from flask_restful import Resource
 from server.models import User
 from server.config import db
@@ -7,10 +8,10 @@ from server.config import db
 class Login(Resource):
     def post(self):
         data = request.get_json()
-        username = data.get('username')
+        email = data.get('email')
         password = data.get('password')
 
-        if not username:
+        if not email:
             return make_response(jsonify({
                 'error': 'Input an email to login'
             }), 401)
@@ -20,7 +21,7 @@ class Login(Resource):
                 'error': 'Input an password to login'
             }), 401)
         
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter_by(email=email).first()
 
         if not user:
             return make_response(jsonify({
@@ -61,21 +62,62 @@ class Register(Resource):
     def post(self):
         data = request.get_json()
         
+        # Validation
+        required_fields = ['firstName', 'secondName', 'email', 'password']
+        for field in required_fields:
+            if not data.get(field):
+                return make_response(jsonify({
+                    'error': f'{field} is required'
+                }), 400)
+        
+        # Validate email format
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, data.get('email')):
+            return make_response(jsonify({
+                'error': 'Invalid email format'
+            }), 400)
+        
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=data.get('email')).first()
+        if existing_user:
+            return make_response(jsonify({
+                'error': 'Email already registered'
+            }), 409)
+        
+        # Check password strength
+        password = data.get('password', '')
+        if len(password) < 8:
+            return make_response(jsonify({
+                'error': 'Password must be at least 8 characters long'
+            }), 400)
+        
+        # Create user
         try:
-            user= User(
+            user = User(
                 firstName=data.get('firstName'),
-                lastName=data.get('lastName'),
+                secondName=data.get('secondName'),
                 email=data.get('email'),
-                phone=data.get('phone')
+                phone=data.get('phone', '')
             )
-
-            user.password = data.get('password')
-
+            
+            user.password_hash = data.get('password')
+            
             db.session.add(user)
             db.session.commit()
-        
-        except:
-            return make_response({'error': 'Could not create user account.'})
-
-        return make_response(user.to_dict(), 201)
-        
+            
+            # Create token for auto-login after registration
+            token = create_access_token(identity=user.id)
+            response = {
+                'message': 'Registration successful',
+                'user': user.to_dict(),
+                'token': token
+            }
+            set_access_cookies(response, token)
+            return make_response(jsonify(response), 201)
+            
+        except Exception as e:
+            db.session.rollback()
+            return make_response(jsonify({
+                'error': 'Could not create user account',
+                'details': str(e)
+            }), 500)

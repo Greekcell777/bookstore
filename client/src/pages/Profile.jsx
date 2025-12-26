@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, Mail, Phone, MapPin, Lock, Eye, EyeOff, Camera, Upload, Check } from 'lucide-react';
+import { useAuth } from '../components/AuthContext';
 
 const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -8,12 +9,14 @@ const ProfilePage = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
-
+  
+  const {user} = useAuth()
+  console.log(user)
   // User profile data state
   const [userData, setUserData] = useState({
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
+    fullName:  `${user.firstName} ${user.secondName}`,
+    email: `${user.email}` || 'john.doe@example.com',
+    phone: `${user.phone}`||'+1 (555) 123-4567',
     address: '123 Main Street, New York, NY 10001',
     bio: 'Book enthusiast and avid reader. Love collecting vintage books and exploring new genres.',
     preferences: {
@@ -30,7 +33,7 @@ const ProfilePage = () => {
     newPassword: '',
     confirmPassword: '',
   });
-
+  console.log(typeof(user.created_at))
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setUserData(prev => ({
@@ -162,19 +165,19 @@ const ProfilePage = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Orders</span>
-                  <span className="font-semibold">12</span>
+                  <span className="font-semibold">0</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Wishlist</span>
-                  <span className="font-semibold">8</span>
+                  <span className="font-semibold">0</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Reviews</span>
-                  <span className="font-semibold">5</span>
+                  <span className="font-semibold">0</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Member Since</span>
-                  <span className="font-semibold">Jan 2023</span>
+                  <span className="font-semibold">{new Date(user.created_at).toUTCString()}</span>
                 </div>
               </div>
             </div>

@@ -1,6 +1,7 @@
 from server.config import db
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy import Column, Integer, String, DateTime, func, Enum
+from sqlalchemy.orm import relationship
 
 from sqlalchemy.ext.hybrid import hybrid_property
 
@@ -14,17 +15,20 @@ class User(db.Model, SerializerMixin):
     email = Column(String(), unique=True, nullable=False)
     _password_hash = Column(String())
     phone = Column(String(), unique=True)
-    role = Column(Enum(*ROLES, name='user_roles'))
+    role = Column(Enum(*ROLES, name='user_roles'), default='customer')
     created_at = Column(DateTime(), server_default=func.now())
     updated_at = Column(DateTime(), onupdate=func.now())
 
-    serialize_only = ('id', 
-                      'firstName', 
-                      'secondName', 
-                      'email', 
-                      'phone', 
-                      'role', 
-                      'created_at',)
+    # Relationships
+    orders = relationship('Order', back_populates='user')
+    addresses = relationship('Address', back_populates='user', cascade='all, delete-orphan')
+    wishlists = relationship('Wishlist', back_populates='user', cascade='all, delete-orphan')
+    
+    serialize_only = ('firstName', 'secondName', 'phone', 'role',
+                      'email', 'orders', 'addresses', 'wishlists',
+                      'created_at', 'updated_at', 'orders', 'addresses',
+                      'wishlists',)
+    serialize_rules = ('-orders.user', '-addresses.user', '-wishlists.user',)
     
     def __repr__(self):
         return f"User {self.id}, {self.email}"   

@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   Loader2
 } from 'lucide-react';
+import { useAuth } from './AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -22,6 +23,8 @@ const Login = () => {
     password: '',
     rememberMe: false
   });
+
+  const {login} = useAuth()
 
   // Handle form input changes
   const handleChange = (e) => {
@@ -57,14 +60,23 @@ const Login = () => {
 
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await login(formData)
+
+      if (response.user) {
+        // Store token and user data
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('booknook_user', JSON.stringify(response.user));
+        
+        // Show success message
+        alert('Login successful! You are now logged in.');
+        
+        // Redirect based on previous location or to home
+        const from = location.state?.from?.pathname || '/';
+        navigate(from, { replace: true });
       
-      // For demo purposes, we'll consider it successful
-      console.log('Login successful:', formData);
-      
-      // Redirect based on previous location or to home
-      const from = location.state?.from?.pathname || '/';
-      navigate(from, { replace: true });
+      } else {
+        throw new Error(response.error || 'Login failed');
+      }
       
     } catch (error) {
       setErrors({ general: `Invalid email or password. Please try again.${error}` });

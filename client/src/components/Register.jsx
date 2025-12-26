@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Mail,
@@ -13,6 +13,7 @@ import {
   BookOpen,
   Loader2
 } from 'lucide-react';
+import { useAuth } from './AuthContext';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -22,11 +23,11 @@ const Register = () => {
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     firstName: '',
-    lastName: '',
+    secondName: '',
     email: '',
     phone: '',
-    password: '',
-    confirmPassword: '',
+    password: 'Fr@nk2024',
+    confirmPassword: 'Fr@nk2024',
     acceptTerms: false,
     newsletter: true
   });
@@ -36,7 +37,8 @@ const Register = () => {
     score: 0,
     message: ''
   });
-
+  
+  const {register} = useAuth()
   // Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -115,7 +117,7 @@ const Register = () => {
     }
   };
 
-  // Handle form submission
+  // Handle form submission with backend integration
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -142,19 +144,64 @@ const Register = () => {
     }
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Prepare data for backend
+      const userData = {
+        firstName: formData.firstName.trim(),
+        secondName: formData.secondName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim() || null,
+        password: formData.password,
+        username: formData.email.trim().split('@')[0] // Generate username from email
+      };
+
+      // Call backend API
+      const response = await register(userData);
       
-      // For demo purposes, we'll consider it successful
-      console.log('Registration successful:', formData);
-      
-      // Redirect to login or home
-      navigate('/login', { state: { registered: true } });
+      if (response.user && response.token) {
+        // Store token and user data
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('booknook_user', JSON.stringify(response.user));
+        
+        // Show success message
+        alert('Registration successful! You are now logged in.');
+        
+        // Redirect to dashboard or home page
+        navigate('/profile');
+      } else {
+        throw new Error(response.error || 'Registration failed');
+      }
       
     } catch (error) {
-      setErrors({ general: `Registration failed. Please try again.${error}` });
+      // Handle specific error cases
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (error.message.includes('Email already registered')) {
+        setErrors({ email: 'This email is already registered. Please use a different email or login.' });
+      } else if (error.message.includes('Invalid email format')) {
+        setErrors({ email: 'Please enter a valid email address.' });
+      } else if (error.message.includes('password')) {
+        setErrors({ password: 'Password requirements not met. Please use a stronger password.' });
+      } else {
+        setErrors({ general: error.message });
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle API response errors
+  const handleApiError = (error) => {
+    console.error('Registration error:', error);
+    
+    // Map backend error messages to form errors
+    if (error.includes('already exists') || error.includes('already registered')) {
+      return { email: 'This email is already registered. Please use a different email or login.' };
+    } else if (error.includes('Invalid email')) {
+      return { email: 'Please enter a valid email address.' };
+    } else if (error.includes('password')) {
+      return { password: 'Password requirements not met. Please use a stronger password.' };
+    } else {
+      return { general: error };
     }
   };
 
@@ -195,7 +242,7 @@ const Register = () => {
               {/* First Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name
+                  First Name *
                 </label>
                 <div className="relative">
                   <UserIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -206,6 +253,7 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-4 py-3 border ${errors.firstName ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="John"
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.firstName && (
@@ -225,11 +273,12 @@ const Register = () => {
                   <UserIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                   <input
                     type="text"
-                    name="lastName"
-                    value={formData.lastName}
+                    name="secondName"
+                    value={formData.secondName}
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Doe"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -237,7 +286,7 @@ const Register = () => {
               {/* Email */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
+                  Email Address *
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -248,6 +297,7 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-4 py-3 border ${errors.email ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="you@example.com"
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.email && (
@@ -272,6 +322,7 @@ const Register = () => {
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="+254712345678"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -279,7 +330,7 @@ const Register = () => {
               {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
+                  Password *
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -290,11 +341,13 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-12 py-3 border ${errors.password ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="Create a password"
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    disabled={isLoading}
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -321,6 +374,9 @@ const Register = () => {
                         style={{ width: `${(passwordStrength.score / 4) * 100}%` }}
                       />
                     </div>
+                    <div className="mt-2 text-xs text-gray-500">
+                      Password must contain at least 8 characters including uppercase, lowercase, number, and special character
+                    </div>
                   </div>
                 )}
 
@@ -335,7 +391,7 @@ const Register = () => {
               {/* Confirm Password */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
+                  Confirm Password *
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -346,11 +402,13 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-12 py-3 border ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="Confirm your password"
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    disabled={isLoading}
                   >
                     {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -374,6 +432,7 @@ const Register = () => {
                     onChange={handleChange}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
                     id="acceptTerms"
+                    disabled={isLoading}
                   />
                   <label htmlFor="acceptTerms" className="ml-3 text-sm text-gray-700">
                     I agree to the{' '}
@@ -402,6 +461,7 @@ const Register = () => {
                     onChange={handleChange}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
                     id="newsletter"
+                    disabled={isLoading}
                   />
                   <label htmlFor="newsletter" className="ml-3 text-sm text-gray-700">
                     Send me reading recommendations, updates, and exclusive offers via email
@@ -437,13 +497,13 @@ const Register = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-4 bg-linear-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-4 bg-linear-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {isLoading ? (
-                    <div className="flex items-center justify-center">
+                    <>
                       <Loader2 size={20} className="animate-spin mr-2" />
                       Creating account...
-                    </div>
+                    </>
                   ) : (
                     'Create Account'
                   )}
