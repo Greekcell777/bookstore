@@ -33,7 +33,7 @@ const apiRequest = async (endpoint, method = 'GET', data = null, requireAuth = t
       let errorMessage = `Request failed with status ${response.status}`;
       try {
         const errorData = await response.json();
-        console.log(errorData.details)
+        console.log(errorData, 1)
         errorMessage = errorData.error || errorData.message || errorMessage;
       } catch (e) {
         // If not JSON, use status text

@@ -6,6 +6,7 @@ from datetime import datetime
 import re
 
 STATUS = ('draft', 'published', 'archived')
+FORMAT = ('Paperback', 'Hardcover', 'eBook')
 
 class Book(db.Model, SerializerMixin):
     __tablename__ = 'books'
@@ -36,7 +37,7 @@ class Book(db.Model, SerializerMixin):
     # Book Details
     language = Column(String(50), nullable=False, default='English')
     page_count = Column(Integer, nullable=False)
-    format = Column(String(50), default='Paperback')  # Paperback, Hardcover, eBook, Audiobook
+    format = Column(String(50), default='Paperback')  # Paperback, Hardcover, eBook
     dimensions = Column(String(100))  # e.g., "8.5 x 5.5 x 1 inches"
     weight_grams = Column(Integer)  # Weight in grams
     
@@ -90,6 +91,7 @@ class Book(db.Model, SerializerMixin):
     order_items = relationship('OrderItem', back_populates='book')
     wishlists = relationship('WishlistItem', back_populates='book')
     images = relationship('BookImage', back_populates='book')
+    
     # Serialization rules
     serialize_rules = (
         '-publisher_rel.book',
@@ -222,7 +224,7 @@ class Book(db.Model, SerializerMixin):
             return 0
         
         discount = ((self.list_price - self.sale_price) / self.list_price) * 100
-        return round(discount, 1)
+        return float(round(discount, 1))
     
     def get_current_price(self):
         """Get current price (sale price if available, else list price)"""

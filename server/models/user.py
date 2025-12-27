@@ -21,13 +21,12 @@ class User(db.Model, SerializerMixin):
 
     # Relationships
     orders = relationship('Order', back_populates='user')
+    carts= relationship('Cart', back_populates='user')
     addresses = relationship('Address', back_populates='user', cascade='all, delete-orphan')
     wishlists = relationship('Wishlist', back_populates='user', cascade='all, delete-orphan')
     
     serialize_only = ('firstName', 'secondName', 'phone', 'role',
-                      'email', 'orders', 'addresses', 'wishlists',
-                      'created_at', 'updated_at', 'orders', 'addresses',
-                      'wishlists',)
+                      'email', 'created_at', 'updated_at',)
     serialize_rules = ('-orders.user', '-addresses.user', '-wishlists.user',)
     
     def __repr__(self):

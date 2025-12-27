@@ -36,7 +36,7 @@ class Address(db.Model, SerializerMixin):
     user = relationship('User', back_populates='addresses')
 
     # Serialization rules
-    serialize_rules = ('-addresses.user',)
+    serialize_rules = ('-user.addresses', '-orders_shipping', '-orders_billing',)
     
     def __repr__(self):
         return f"Address {self.id}, {self.town}, {self.country}"

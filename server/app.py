@@ -7,15 +7,18 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from server.config import db
 from server.controllers import addResource
-from server.models import (User, Category, Address, Book, BookImage, 
-                           Publisher, Order, OrderItem, Payment, Review, 
-                           ReviewVote, book_categories,  Wishlist, WishlistItem
-                           )
+from server.models import (
+                        User, Category, Address, Book, BookImage, 
+                        Publisher, Order, OrderItem, Payment, Review, 
+                        ReviewVote, book_categories,  Wishlist, WishlistItem
+                            )
 
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app=app, supports_credentials=True)
+CORS(app=app, 
+     resources={r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}},
+     supports_credentials=True)
 
 app.config.from_prefixed_env(prefix='FLASK')
 migrate = Migrate(app=app, db=db)

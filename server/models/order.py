@@ -275,3 +275,30 @@ class Payment(db.Model, SerializerMixin):
             self.status = 'failed'
             self.completed_at = datetime.utcnow()
             self.order.payment_status = 'failed'
+
+# models/cart.py
+class Cart(db.Model, SerializerMixin):
+    __tablename__ = 'carts'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+    
+    user = relationship('User', back_populates='carts')
+    items = relationship('CartItem', back_populates='cart', cascade='all, delete-orphan')
+
+
+class CartItem(db.Model, SerializerMixin):
+    __tablename__ = 'cart_items'
+    
+    id = Column(Integer, primary_key=True)
+    cart_id = Column(Integer, ForeignKey('carts.id'), nullable=False)
+    book_id = Column(Integer, ForeignKey('books.id'), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+    
+    cart = relationship('Cart', back_populates='items')
+    book = relationship('Book')

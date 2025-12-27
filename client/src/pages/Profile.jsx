@@ -33,7 +33,7 @@ const ProfilePage = () => {
     newPassword: '',
     confirmPassword: '',
   });
-  console.log(typeof(user.created_at))
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setUserData(prev => ({

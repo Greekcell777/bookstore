@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Star,
@@ -20,8 +20,11 @@ import {
   ThumbsUp,
   MessageCircle,
   Clock,
-  User
+  User,
+  Loader
 } from 'lucide-react';
+import { booksAPI, cartAPI, reviewsAPI, wishlistAPI } from '../services/api';
+
 
 const BookDetail = () => {
   const { id } = useParams();
@@ -32,151 +35,308 @@ const BookDetail = () => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [book, setBook] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [similarBooks, setSimilarBooks] = useState([]);
+  const [ratingDistribution, setRatingDistribution] = useState({
+    5: 0,
+    4: 0,
+    3: 0,
+    2: 0,
+    1: 0
+  });
 
-  // Mock book data
-  const book = {
-    id: parseInt(id),
-    title: "The Midnight Library: A Novel",
-    author: "Matt Haig",
-    authorBio: "Matt Haig is the author of several bestselling novels including 'The Humans' and 'How to Stop Time'. His work has been translated into over 40 languages.",
-    price: 24.99,
-    originalPrice: 29.99,
-    rating: 4.5,
-    reviews: 2457,
-    pages: 304,
-    publishedDate: "September 29, 2020",
-    publisher: "Penguin Books",
-    isbn: "978-0525559474",
-    language: "English",
-    category: "Fiction / Magical Realism",
-    description: "Between life and death there is a library, and within that library, the shelves go on forever. Every book provides a chance to try another life you could have lived. To see how things would be if you had made other choices... Would you have done anything different, if you had the chance to undo your regrets?",
-    longDescription: `
-      <p>Nora Seed has a list of regrets. She feels she has let everyone down, including herself. But things are about to change.</p>
-      <p>The books in the Midnight Library enable Nora to live as if she had done things differently. With the help of an old friend, she can now undo every one of her regrets as she tries to work out her perfect life.</p>
-      <p>But things aren't always what she imagined they'd be, and soon her choices place the library and herself in extreme danger. Before time runs out, she must answer the ultimate question: what is the best way to live?</p>
-    `,
-    formats: [
-      { type: 'paperback', price: 24.99, discount: 17 },
-      { type: 'hardcover', price: 34.99, discount: 10 },
-      { type: 'ebook', price: 14.99, discount: 25 },
-      { type: 'audiobook', price: 19.99, discount: 20 }
-    ],
-    images: [
-      "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=800&h=1200&fit=crop",
-      "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&h=1200&fit=crop",
-      "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&h=1200&fit=crop"
-    ],
-    inStock: true,
-    stockCount: 47,
-    deliveryTime: "2-3 business days",
-    features: [
-      "New York Times Bestseller",
-      "Goodreads Choice Award Winner",
-      "A Good Morning America Book Club Pick"
-    ],
-    specifications: {
-      dimensions: "5.5 x 1 x 8.25 inches",
-      weight: "12.8 ounces",
-      ageRange: "Adult"
-    },
-    similarBooks: [
-      {
-        id: 2,
-        title: "The Invisible Life of Addie LaRue",
-        author: "V.E. Schwab",
-        price: 26.99,
-        rating: 4.4,
-        image: "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=300&h=450&fit=crop"
-      },
-      {
-        id: 3,
-        title: "Klara and the Sun",
-        author: "Kazuo Ishiguro",
-        price: 27.99,
-        rating: 4.3,
-        image: "https://images.unsplash.com/photo-1531346688376-ab6275c4725e?w=300&h=450&fit=crop"
-      },
-      {
-        id: 4,
-        title: "Project Hail Mary",
-        author: "Andy Weir",
-        price: 29.99,
-        rating: 4.7,
-        image: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=300&h=450&fit=crop"
+  // Fetch book data
+  useEffect(() => {
+    const fetchBookData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch book details
+        const bookData = await booksAPI.getBook(id);
+        setBook(bookData);
+        
+        // Set default format based on available formats
+        if (bookData.format) {
+          setSelectedFormat(bookData.format.toLowerCase());
+        }
+        
+        // Fetch reviews for this book
+        fetchReviews(id);
+        
+        // Fetch similar books (by category)
+        fetchSimilarBooks(bookData);
+        
+      } catch (err) {
+        setError(err.message || 'Failed to fetch book');
+        console.error('Error fetching book:', err);
+      } finally {
+        setLoading(false);
       }
-    ]
-  };
+    };
 
-  // Mock reviews data
-  const reviews = [
-    {
-      id: 1,
-      user: "Sarah Johnson",
-      rating: 5,
-      date: "2 weeks ago",
-      verified: true,
-      helpful: 342,
-      content: "This book changed my perspective on life. The concept is brilliant and the writing is beautiful. Couldn't put it down!",
-      avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face"
-    },
-    {
-      id: 2,
-      user: "Michael Chen",
-      rating: 4,
-      date: "1 month ago",
-      verified: true,
-      helpful: 187,
-      content: "Thought-provoking and emotional. The premise is unique and well-executed. Some parts felt a bit repetitive, but overall a great read.",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"
-    },
-    {
-      id: 3,
-      user: "Emma Rodriguez",
-      rating: 5,
-      date: "3 months ago",
-      verified: false,
-      helpful: 92,
-      content: "Beautifully written. Made me reflect on my own life choices. The ending was perfect and left me in tears.",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face"
+    fetchBookData();
+  }, [id]);
+
+  // Fetch reviews
+  const fetchReviews = async (bookId) => {
+    try {
+      const data = await reviewsAPI.getBookReviews(bookId);
+      setReviews(data.reviews || []);
+      
+      // Calculate rating distribution
+      if (data.reviews && data.reviews.length > 0) {
+        const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        data.reviews.forEach(review => {
+          const rating = Math.round(review.rating);
+          if (distribution[rating] !== undefined) {
+            distribution[rating] += 1;
+          }
+        });
+        
+        // Convert to percentages
+        const total = data.reviews.length;
+        const percentageDistribution = {};
+        Object.keys(distribution).forEach(key => {
+          percentageDistribution[key] = Math.round((distribution[key] / total) * 100);
+        });
+        setRatingDistribution(percentageDistribution);
+      }
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+      // Use empty reviews array as fallback
+      setReviews([]);
     }
-  ];
-
-  const ratingDistribution = {
-    5: 68,
-    4: 22,
-    3: 7,
-    2: 2,
-    1: 1
   };
 
-  // Calculate average rating
-  const averageRating = book.rating;
-  const totalReviews = book.reviews;
+  // Fetch similar books
+  const fetchSimilarBooks = async (bookData) => {
+    try {
+      // Get first category for filtering
+      const categorySlug = bookData.categories?.[0]?.slug;
+      
+      if (categorySlug) {
+        const params = {
+          category: categorySlug,
+          limit: 3,
+          exclude: id // Assuming your API supports excluding current book
+        };
+        
+        const data = await booksAPI.getBooks(params);
+        setSimilarBooks(data.books || []);
+      } else {
+        // If no category, get featured books
+        const data = await booksAPI.getFeaturedBooks();
+        setSimilarBooks(data.books || []);
+      }
+    } catch (err) {
+      console.error('Error fetching similar books:', err);
+      setSimilarBooks([]);
+    }
+  };
+
+  // Check if book is in wishlist
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      try {
+        const wishlist = await wishlistAPI.getWishlist();
+        if (wishlist.items && Array.isArray(wishlist.items)) {
+          const isInWishlist = wishlist.items.some(item => item.book_id === parseInt(id));
+          setIsInWishlist(isInWishlist);
+        }
+      } catch (err) {
+        console.error('Error checking wishlist:', err);
+        // Don't show error to user for wishlist check
+      }
+    };
+
+    checkWishlistStatus();
+  }, [id]);
+
+  // Process book data from API
+  const processBookData = (bookData) => {
+    if (!bookData) return null;
+    
+    // Generate multiple images from cover image and additional images
+    const mainImage = bookData.cover_image_url || 
+      'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=800&h=1200&fit=crop';
+    
+    const additionalImages = bookData.images?.map(img => img.image_url) || [];
+    const images = [mainImage, ...additionalImages].filter(Boolean);
+    
+    // Generate formats based on data
+    const formats = [
+      { 
+        type: bookData.format?.toLowerCase() || 'paperback', 
+        price: bookData.current_price || bookData.list_price || 0,
+        discount: bookData.discount_percentage || 0
+      }
+    ];
+
+    // If there are multiple formats in your data, map them here
+    // Example: if bookData.formats exists, map it
+
+    // Parse publication date
+    let publishedDate = "Unknown";
+    if (bookData.publication_date) {
+      try {
+        publishedDate = new Date(bookData.publication_date).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } catch (e) {
+        console.error('Error parsing date:', e);
+      }
+    }
+
+    return {
+      id: bookData.id,
+      title: bookData.title,
+      author: bookData.author,
+      authorBio: bookData.author_bio || "Author information not available.",
+      price: bookData.current_price || bookData.list_price || 0,
+      originalPrice: bookData.list_price || 0,
+      rating: bookData.average_rating || 0,
+      reviews: bookData.rating_count || 0,
+      pages: bookData.page_count || 0,
+      publishedDate,
+      publisher: bookData.publisher || "Unknown",
+      isbn: bookData.isbn_13 || bookData.isbn_10 || "Unknown",
+      language: bookData.language || "English",
+      category: bookData.categories?.[0]?.name || "Uncategorized",
+      description: bookData.short_description || bookData.description || "No description available.",
+      longDescription: bookData.description || `<p>No detailed description available.</p>`,
+      formats,
+      images,
+      inStock: bookData.is_available && (bookData.stock_quantity > 0 || bookData.allow_backorders),
+      stockCount: bookData.stock_quantity || 0,
+      deliveryTime: "2-3 business days",
+      features: [
+        bookData.is_bestseller && "Bestseller",
+        bookData.is_featured && "Featured",
+        bookData.is_new_release && "New Release"
+      ].filter(Boolean),
+      specifications: {
+        dimensions: bookData.dimensions || "Not specified",
+        weight: bookData.weight_grams ? `${bookData.weight_grams}g` : "Not specified",
+        ageRange: "General Audience"
+      },
+      meta: {
+        publisher_id: bookData.publisher_id,
+        sku: bookData.sku,
+        status: bookData.status
+      }
+    };
+  };
 
   // Handle add to cart
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    if (!book) return;
+    
     setIsAddingToCart(true);
-    setTimeout(() => {
+    try {
+      await cartAPI.addToCart(book.id, quantity);
+      
+      // Show success message (you could use a toast notification here)
+      console.log('Added to cart successfully');
+      
+      // Optional: Trigger cart refresh in parent component
+      // if (typeof onCartUpdate === 'function') {
+      //   onCartUpdate();
+      // }
+      
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      // Show error message to user
+      alert(err.message || 'Failed to add to cart');
+    } finally {
       setIsAddingToCart(false);
-      // Success notification would go here
-    }, 1000);
+    }
   };
 
   // Handle wishlist toggle
-  const handleWishlistToggle = () => {
-    setIsInWishlist(!isInWishlist);
+  const handleWishlistToggle = async () => {
+    if (!book) return;
+    
+    try {
+      if (isInWishlist) {
+        // Find wishlist item ID and remove
+        const wishlist = await wishlistAPI.getWishlist();
+        const wishlistItem = wishlist.items?.find(item => item.book_id === book.id);
+        if (wishlistItem) {
+          await wishlistAPI.removeFromWishlist(wishlistItem.id);
+        }
+      } else {
+        await wishlistAPI.addToWishlist(book.id);
+      }
+      
+      setIsInWishlist(!isInWishlist);
+      
+    } catch (err) {
+      console.error('Error updating wishlist:', err);
+      alert(err.message || 'Failed to update wishlist');
+    }
   };
 
   // Format price
   const formatPrice = (price) => {
+    if (price === null || price === undefined || isNaN(price)) return '$0.00';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
     }).format(price);
   };
 
-  // Get current format
-  const currentFormat = book.formats.find(f => f.type === selectedFormat) || book.formats[0];
+  // Submit a review
+  const handleSubmitReview = async (reviewData) => {
+    try {
+      await reviewsAPI.createReview(id, reviewData);
+      // Refresh reviews
+      fetchReviews(id);
+      // Show success message
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      alert(err.message || 'Failed to submit review');
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading book details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !book) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <X className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Book Not Found</h2>
+          <p className="text-gray-600 mb-6">{error || 'The book you are looking for does not exist.'}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Process book data
+  const processedBook = processBookData(book);
+  const currentFormat = processedBook.formats.find(f => f.type === selectedFormat) || processedBook.formats[0];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -196,11 +356,12 @@ const BookDetail = () => {
               Books
             </Link>
             <span>/</span>
-            <Link to={`/category/${book.category.toLowerCase().split('/')[0]}`} className="hover:text-blue-600 transition-colors">
-              {book.category.split('/')[0]}
+            <Link to={`/category/${processedBook.category.toLowerCase().replace(/\s+/g, '-')}`} 
+                  className="hover:text-blue-600 transition-colors">
+              {processedBook.category}
             </Link>
             <span>/</span>
-            <span className="text-gray-900 truncate max-w-xs">{book.title}</span>
+            <span className="text-gray-900 truncate max-w-xs">{processedBook.title}</span>
           </div>
         </div>
       </div>
@@ -217,32 +378,40 @@ const BookDetail = () => {
                   {/* Main Image */}
                   <div className="bg-gray-100 rounded-lg overflow-hidden mb-4">
                     <img
-                      src={book.images[selectedImage]}
-                      alt={book.title}
+                      src={processedBook.images[selectedImage]}
+                      alt={processedBook.title}
                       className="w-full h-auto object-cover max-h-[125] mx-auto"
+                      onError={(e) => {
+                        e.target.src = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=800&h=1200&fit=crop';
+                      }}
                     />
                   </div>
                   
                   {/* Thumbnail Images */}
-                  <div className="flex space-x-2">
-                    {book.images.map((img, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedImage(index)}
-                        className={`flex-1 h-20 rounded-md overflow-hidden border-2 transition-all ${
-                          selectedImage === index 
-                            ? 'border-blue-500 ring-2 ring-blue-200' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <img
-                          src={img}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
+                  {processedBook.images.length > 1 && (
+                    <div className="flex space-x-2">
+                      {processedBook.images.map((img, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedImage(index)}
+                          className={`flex-1 h-20 rounded-md overflow-hidden border-2 transition-all ${
+                            selectedImage === index 
+                              ? 'border-blue-500 ring-2 ring-blue-200' 
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <img
+                            src={img}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.src = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=200&h=300&fit=crop';
+                            }}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   
                   {/* Stock Info */}
                   <div className="mt-6 p-4 bg-blue-50 rounded-lg">
@@ -250,19 +419,24 @@ const BookDetail = () => {
                       <div className="flex items-center">
                         <Package className="text-blue-600 mr-2" size={20} />
                         <span className="text-sm">
-                          {book.inStock ? 'In Stock' : 'Out of Stock'}
+                          {processedBook.inStock ? 'In Stock' : 'Out of Stock'}
                         </span>
                       </div>
-                      {book.inStock && (
+                      {processedBook.inStock && processedBook.stockCount > 0 && (
                         <span className="text-sm text-gray-600">
-                          {book.stockCount} available
+                          {processedBook.stockCount} available
+                        </span>
+                      )}
+                      {processedBook.inStock && processedBook.stockCount <= 0 && (
+                        <span className="text-sm text-yellow-600">
+                          Backorder Available
                         </span>
                       )}
                     </div>
                     
                     <div className="mt-2 flex items-center text-sm text-gray-600">
                       <Truck className="mr-2" size={16} />
-                      <span>Delivery: {book.deliveryTime}</span>
+                      <span>Delivery: {processedBook.deliveryTime}</span>
                     </div>
                   </div>
                 </div>
@@ -271,21 +445,24 @@ const BookDetail = () => {
               {/* Right: Details */}
               <div className="lg:w-3/5">
                 {/* Category */}
-                <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full mb-4">
-                  {book.category}
-                </span>
+                {processedBook.category && (
+                  <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full mb-4">
+                    {processedBook.category}
+                  </span>
+                )}
                 
                 {/* Title */}
                 <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
-                  {book.title}
+                  {processedBook.title}
                 </h1>
                 
                 {/* Author */}
                 <div className="flex items-center mb-6">
                   <BookOpen className="text-gray-400 mr-2" size={20} />
                   <span className="text-lg text-gray-700">
-                    by <Link to={`/author/${book.author.toLowerCase().replace(/\s+/g, '-')}`} className="text-blue-600 hover:underline">
-                      {book.author}
+                    by <Link to={`/author/${processedBook.author.toLowerCase().replace(/\s+/g, '-')}`} 
+                          className="text-blue-600 hover:underline">
+                      {processedBook.author}
                     </Link>
                   </span>
                 </div>
@@ -297,68 +474,80 @@ const BookDetail = () => {
                       <Star
                         key={i}
                         className={`w-5 h-5 ${
-                          i < Math.floor(averageRating)
+                          i < Math.floor(processedBook.rating)
                             ? 'fill-yellow-400 text-yellow-400'
-                            : i < averageRating
+                            : i < processedBook.rating
                             ? 'fill-yellow-300 text-yellow-300'
                             : 'fill-gray-300 text-gray-300'
                         }`}
                       />
                     ))}
                     <span className="ml-2 text-lg font-semibold">
-                      {averageRating.toFixed(1)}
+                      {processedBook.rating.toFixed(1)}
                     </span>
                   </div>
                   <span className="text-gray-600">
-                    ({totalReviews.toLocaleString()} reviews)
+                    ({processedBook.reviews.toLocaleString()} reviews)
                   </span>
-                  <div className="ml-4 px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full flex items-center">
-                    <Award size={14} className="mr-1" />
-                    Bestseller
-                  </div>
+                  {book.is_bestseller && (
+                    <div className="ml-4 px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full flex items-center">
+                      <Award size={14} className="mr-1" />
+                      Bestseller
+                    </div>
+                  )}
+                  {book.is_featured && (
+                    <div className="ml-4 px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full flex items-center">
+                      <Award size={14} className="mr-1" />
+                      Featured
+                    </div>
+                  )}
                 </div>
                 
                 {/* Features */}
-                <div className="mb-6">
-                  {book.features.map((feature, index) => (
-                    <div key={index} className="flex items-center text-gray-600 mb-2">
-                      <Check className="text-green-500 mr-2" size={16} />
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Format Selection */}
-                <div className="mb-8">
-                  <h3 className="font-semibold mb-3">Select Format:</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {book.formats.map((format) => (
-                      <button
-                        key={format.type}
-                        onClick={() => setSelectedFormat(format.type)}
-                        className={`p-3 rounded-lg border-2 transition-all ${
-                          selectedFormat === format.type
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="text-sm font-medium capitalize">
-                          {format.type}
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-lg font-bold">
-                            {formatPrice(format.price)}
-                          </span>
-                          {format.discount > 0 && (
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                              -{format.discount}%
-                            </span>
-                          )}
-                        </div>
-                      </button>
+                {processedBook.features.length > 0 && (
+                  <div className="mb-6">
+                    {processedBook.features.map((feature, index) => (
+                      <div key={index} className="flex items-center text-gray-600 mb-2">
+                        <Check className="text-green-500 mr-2" size={16} />
+                        <span>{feature}</span>
+                      </div>
                     ))}
                   </div>
-                </div>
+                )}
+                
+                {/* Format Selection */}
+                {processedBook.formats.length > 1 && (
+                  <div className="mb-8">
+                    <h3 className="font-semibold mb-3">Select Format:</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {processedBook.formats.map((format) => (
+                        <button
+                          key={format.type}
+                          onClick={() => setSelectedFormat(format.type)}
+                          className={`p-3 rounded-lg border-2 transition-all ${
+                            selectedFormat === format.type
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="text-sm font-medium capitalize">
+                            {format.type}
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-lg font-bold">
+                              {formatPrice(format.price)}
+                            </span>
+                            {format.discount > 0 && (
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                -{format.discount}%
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Price & Actions */}
                 <div className="bg-gray-50 rounded-lg p-6 mb-8">
@@ -370,10 +559,10 @@ const BookDetail = () => {
                       {currentFormat.discount > 0 && (
                         <div className="flex items-center">
                           <span className="text-lg text-gray-400 line-through mr-2">
-                            {formatPrice(book.originalPrice)}
+                            {formatPrice(processedBook.originalPrice)}
                           </span>
                           <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                            Save {formatPrice(book.originalPrice - currentFormat.price)}
+                            Save {formatPrice(processedBook.originalPrice - currentFormat.price)}
                           </span>
                         </div>
                       )}
@@ -407,16 +596,16 @@ const BookDetail = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <button
                       onClick={handleAddToCart}
-                      disabled={!book.inStock || isAddingToCart}
+                      disabled={!processedBook.inStock || isAddingToCart}
                       className={`flex items-center justify-center px-6 py-3 rounded-lg font-medium transition-all ${
-                        book.inStock
+                        processedBook.inStock
                           ? 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'
                           : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       }`}
                     >
                       {isAddingToCart ? (
                         <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                          <Loader className="w-5 h-5 animate-spin text-white mr-2" />
                           Adding...
                         </>
                       ) : (
@@ -470,22 +659,22 @@ const BookDetail = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
                     <BookOpen className="mx-auto text-blue-600 mb-2" size={20} />
-                    <div className="font-semibold">{book.pages}</div>
+                    <div className="font-semibold">{processedBook.pages}</div>
                     <div className="text-sm text-gray-600">Pages</div>
                   </div>
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
                     <Calendar className="mx-auto text-blue-600 mb-2" size={20} />
-                    <div className="font-semibold">{book.publishedDate.split(' ')[2]}</div>
+                    <div className="font-semibold">{processedBook.publishedDate.split(' ')[2]}</div>
                     <div className="text-sm text-gray-600">Published</div>
                   </div>
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
                     <Globe className="mx-auto text-blue-600 mb-2" size={20} />
-                    <div className="font-semibold">{book.language}</div>
+                    <div className="font-semibold">{processedBook.language}</div>
                     <div className="text-sm text-gray-600">Language</div>
                   </div>
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
                     <Bookmark className="mx-auto text-blue-600 mb-2" size={20} />
-                    <div className="font-semibold">{book.isbn}</div>
+                    <div className="font-semibold">{processedBook.isbn}</div>
                     <div className="text-sm text-gray-600">ISBN</div>
                   </div>
                 </div>
@@ -516,10 +705,10 @@ const BookDetail = () => {
               {activeTab === 'description' && (
                 <div className="prose max-w-none">
                   <h3 className="text-xl font-semibold mb-4">About this book</h3>
-                  <p className="text-gray-700 mb-6 text-lg leading-relaxed">{book.description}</p>
+                  <p className="text-gray-700 mb-6 text-lg leading-relaxed">{processedBook.description}</p>
                   <div 
                     className="text-gray-600 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: book.longDescription }}
+                    dangerouslySetInnerHTML={{ __html: processedBook.longDescription }}
                   />
                 </div>
               )}
@@ -531,23 +720,23 @@ const BookDetail = () => {
                     <dl className="space-y-3">
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <dt className="text-gray-600">Publisher</dt>
-                        <dd className="font-medium">{book.publisher}</dd>
+                        <dd className="font-medium">{processedBook.publisher}</dd>
                       </div>
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <dt className="text-gray-600">Publication Date</dt>
-                        <dd className="font-medium">{book.publishedDate}</dd>
+                        <dd className="font-medium">{processedBook.publishedDate}</dd>
                       </div>
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <dt className="text-gray-600">Pages</dt>
-                        <dd className="font-medium">{book.pages}</dd>
+                        <dd className="font-medium">{processedBook.pages}</dd>
                       </div>
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <dt className="text-gray-600">Language</dt>
-                        <dd className="font-medium">{book.language}</dd>
+                        <dd className="font-medium">{processedBook.language}</dd>
                       </div>
                       <div className="flex justify-between border-b border-gray-100 pb-2">
-                        <dt className="text-gray-600">ISBN-10</dt>
-                        <dd className="font-medium">{book.isbn}</dd>
+                        <dt className="text-gray-600">ISBN-13</dt>
+                        <dd className="font-medium">{processedBook.isbn}</dd>
                       </div>
                     </dl>
                   </div>
@@ -556,15 +745,19 @@ const BookDetail = () => {
                     <dl className="space-y-3">
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <dt className="text-gray-600">Dimensions</dt>
-                        <dd className="font-medium">{book.specifications.dimensions}</dd>
+                        <dd className="font-medium">{processedBook.specifications.dimensions}</dd>
                       </div>
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <dt className="text-gray-600">Weight</dt>
-                        <dd className="font-medium">{book.specifications.weight}</dd>
+                        <dd className="font-medium">{processedBook.specifications.weight}</dd>
                       </div>
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <dt className="text-gray-600">Age Range</dt>
-                        <dd className="font-medium">{book.specifications.ageRange}</dd>
+                        <dd className="font-medium">{processedBook.specifications.ageRange}</dd>
+                      </div>
+                      <div className="flex justify-between border-b border-gray-100 pb-2">
+                        <dt className="text-gray-600">SKU</dt>
+                        <dd className="font-medium">{book.sku}</dd>
                       </div>
                     </dl>
                   </div>
@@ -576,15 +769,15 @@ const BookDetail = () => {
                   {/* Rating Overview */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
                     <div className="text-center lg:text-left">
-                      <div className="text-5xl font-bold mb-2">{averageRating.toFixed(1)}</div>
+                      <div className="text-5xl font-bold mb-2">{processedBook.rating.toFixed(1)}</div>
                       <div className="flex justify-center lg:justify-start mb-2">
                         {[...Array(5)].map((_, i) => (
                           <Star
                             key={i}
                             className={`w-6 h-6 ${
-                              i < Math.floor(averageRating)
+                              i < Math.floor(processedBook.rating)
                                 ? 'fill-yellow-400 text-yellow-400'
-                                : i < averageRating
+                                : i < processedBook.rating
                                 ? 'fill-yellow-300 text-yellow-300'
                                 : 'fill-gray-300 text-gray-300'
                             }`}
@@ -592,7 +785,7 @@ const BookDetail = () => {
                         ))}
                       </div>
                       <div className="text-gray-600">
-                        Based on {totalReviews.toLocaleString()} reviews
+                        Based on {processedBook.reviews.toLocaleString()} reviews
                       </div>
                     </div>
                     
@@ -622,7 +815,13 @@ const BookDetail = () => {
                   {/* Review Form */}
                   <div className="mb-8 p-6 bg-blue-50 rounded-lg">
                     <h4 className="font-semibold mb-4">Share your thoughts</h4>
-                    <button className="w-full md:w-auto px-6 py-3 bg-white border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                    <button 
+                      className="w-full md:w-auto px-6 py-3 bg-white border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                      onClick={() => {
+                        // You could open a review modal here
+                        alert('Review form would open here');
+                      }}
+                    >
                       Write a review
                     </button>
                   </div>
@@ -633,20 +832,18 @@ const BookDetail = () => {
                       <div key={review.id} className="pb-6 border-b border-gray-100 last:border-0">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center">
-                            <img
-                              src={review.avatar}
-                              alt={review.user}
-                              className="w-10 h-10 rounded-full mr-3"
-                            />
+                            <div className="w-10 h-10 bg-gray-200 rounded-full mr-3 flex items-center justify-center">
+                              <User className="text-gray-500" size={20} />
+                            </div>
                             <div>
-                              <div className="font-medium">{review.user}</div>
+                              <div className="font-medium">{review.user?.name || 'Anonymous'}</div>
                               <div className="flex items-center text-sm text-gray-600">
                                 <div className="flex">
                                   {[...Array(5)].map((_, i) => (
                                     <Star
                                       key={i}
                                       className={`w-4 h-4 ${
-                                        i < review.rating
+                                        i < (review.rating || 0)
                                           ? 'fill-yellow-400 text-yellow-400'
                                           : 'fill-gray-300 text-gray-300'
                                       }`}
@@ -654,7 +851,7 @@ const BookDetail = () => {
                                   ))}
                                 </div>
                                 <span className="mx-2">•</span>
-                                <span>{review.date}</span>
+                                <span>{review.created_at ? new Date(review.created_at).toLocaleDateString() : 'Recently'}</span>
                                 {review.verified && (
                                   <>
                                     <span className="mx-2">•</span>
@@ -671,26 +868,33 @@ const BookDetail = () => {
                             <Share2 size={18} />
                           </button>
                         </div>
-                        <p className="text-gray-700 mb-4">{review.content}</p>
+                        <p className="text-gray-700 mb-4">{review.content || 'No review content'}</p>
                         <div className="flex items-center text-sm text-gray-600">
-                          <button className="flex items-center mr-4 hover:text-blue-600 transition-colors">
+                          <button 
+                            className="flex items-center mr-4 hover:text-blue-600 transition-colors"
+                            onClick={() => reviewsAPI.markHelpful(review.id)}
+                          >
                             <ThumbsUp size={16} className="mr-1" />
-                            Helpful ({review.helpful})
-                          </button>
-                          <button className="flex items-center hover:text-blue-600 transition-colors">
-                            <MessageCircle size={16} className="mr-1" />
-                            Reply
+                            Helpful ({review.helpful_count || 0})
                           </button>
                         </div>
                       </div>
                     ))}
                     
                     {/* Load More Button */}
-                    <div className="text-center pt-4">
-                      <button className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                        Load More Reviews
-                      </button>
-                    </div>
+                    {reviews.length > 0 && (
+                      <div className="text-center pt-4">
+                        <button className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                          Load More Reviews
+                        </button>
+                      </div>
+                    )}
+                    
+                    {reviews.length === 0 && (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500">No reviews yet. Be the first to review this book!</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -703,18 +907,21 @@ const BookDetail = () => {
                         <div className="w-24 h-24 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
                           <Users size={40} className="text-blue-600" />
                         </div>
-                        <h4 className="font-semibold text-lg">{book.author}</h4>
+                        <h4 className="font-semibold text-lg">{processedBook.author}</h4>
                         <p className="text-gray-600 text-sm mt-2">Author</p>
                       </div>
                     </div>
                   </div>
                   <div className="md:w-2/3">
                     <h4 className="font-semibold text-lg mb-4">About the Author</h4>
-                    <p className="text-gray-700 leading-relaxed mb-6">{book.authorBio}</p>
+                    <p className="text-gray-700 leading-relaxed mb-6">{processedBook.authorBio}</p>
                     <div className="flex space-x-4">
-                      <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                      <Link 
+                        to={`/catalog?author=${encodeURIComponent(processedBook.author)}`}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
                         View All Books
-                      </button>
+                      </Link>
                       <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                         Follow Author
                       </button>
@@ -727,60 +934,65 @@ const BookDetail = () => {
         </div>
         
         {/* Similar Books */}
-        <div className="mt-12">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">You may also like</h2>
-            <Link to="/catalog" className="text-blue-600 hover:text-blue-700 font-medium">
-              View all →
-            </Link>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {book.similarBooks.map((similarBook) => (
-              <Link
-                key={similarBook.id}
-                to={`/book/${similarBook.id}`}
-                className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-300 hover:-translate-y-1"
-              >
-                <div className="flex">
-                  <div className="w-24 h-32 shrink-0">
-                    <img
-                      src={similarBook.image}
-                      alt={similarBook.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
-                  <div className="p-4 flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2 group-hover:text-blue-600">
-                      {similarBook.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-2">{similarBook.author}</p>
-                    <div className="flex items-center mb-3">
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-4 h-4 ${
-                              i < Math.floor(similarBook.rating)
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : 'fill-gray-300 text-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <span className="ml-2 text-sm text-gray-500">
-                        {similarBook.rating.toFixed(1)}
-                      </span>
-                    </div>
-                    <div className="font-bold text-lg">
-                      ${similarBook.price.toFixed(2)}
-                    </div>
-                  </div>
-                </div>
+        {similarBooks.length > 0 && (
+          <div className="mt-12">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">You may also like</h2>
+              <Link to="/catalog" className="text-blue-600 hover:text-blue-700 font-medium">
+                View all →
               </Link>
-            ))}
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {similarBooks.map((similarBook) => (
+                <Link
+                  key={similarBook.id}
+                  to={`/book/${similarBook.id}`}
+                  className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+                >
+                  <div className="flex">
+                    <div className="w-24 h-32 shrink-0">
+                      <img
+                        src={similarBook.cover_image_url || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&h=450&fit=crop'}
+                        alt={similarBook.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&h=450&fit=crop';
+                        }}
+                      />
+                    </div>
+                    <div className="p-4 flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2 group-hover:text-blue-600">
+                        {similarBook.title}
+                      </h3>
+                      <p className="text-gray-600 text-sm mb-2">{similarBook.author}</p>
+                      <div className="flex items-center mb-3">
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i < Math.floor(similarBook.average_rating || 0)
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'fill-gray-300 text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="ml-2 text-sm text-gray-500">
+                          {(similarBook.average_rating || 0).toFixed(1)}
+                        </span>
+                      </div>
+                      <div className="font-bold text-lg">
+                        {formatPrice(similarBook.current_price || similarBook.list_price)}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

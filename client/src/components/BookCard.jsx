@@ -1,12 +1,36 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Star, ShoppingCart, Heart, BookOpen } from 'lucide-react';
+import { cartAPI } from '../services/api';
 
 const BookCard = ({ book, viewMode = 'grid' }) => {
-  const handleAddToCart = (e) => {
+  console.log(book)
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     // Add to cart logic here
+    if (!book) return;
+        
+        setIsAddingToCart(true);
+        try {
+          await cartAPI.addToCart(book.id, quantity);
+
+          
+          // Show success message (you could use a toast notification here)
+          console.log('Added to cart successfully');
+          
+          // Optional: Trigger cart refresh in parent component
+          // if (typeof onCartUpdate === 'function') {
+          //   onCartUpdate();
+          // }
+          
+        } catch (err) {
+          console.error('Error adding to cart:', err);
+          // Show error message to user
+          alert(err.message || 'Failed to add to cart');
+        } finally {
+          setIsAddingToCart(false);
+        }
     console.log('Add to cart:', book.id);
   };
 
@@ -23,7 +47,7 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 hover:-translate-y-1 overflow-hidden">
           <div className="flex">
             {/* Book Image */}
-            <div className="w-32 h-48 flex-shrink-0">
+            <div className="w-32 h-48 shrink-0">
               <img
                 src={book.image}
                 alt={book.title}
@@ -45,7 +69,7 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
                         <Star
                           key={i}
                           className={`w-4 h-4 ${
-                            i < Math.floor(book.rating)
+                            i < Math.floor(book.average_rating)
                               ? 'fill-yellow-400 text-yellow-400'
                               : 'fill-gray-300 text-gray-300'
                           }`}
@@ -53,10 +77,10 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
                       ))}
                     </div>
                     <span className="ml-2 text-sm text-gray-500">
-                      ({book.reviews.toLocaleString()} reviews)
+                      ({book.review_count} reviews)
                     </span>
                     <span className="ml-4 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                      {book.category}
+                      {book.categories[0].name}
                     </span>
                   </div>
                 </div>
@@ -64,9 +88,9 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
                 {/* Price */}
                 <div className="text-right">
                   <div className="text-2xl font-bold text-gray-900 mb-2">
-                    ${book.price.toFixed(2)}
+                    ${book.current_price.toFixed(2)}
                   </div>
-                  {!book.inStock && (
+                  {(book.stock_status !== "In Stock" ) && (
                     <span className="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
                       Out of Stock
                     </span>
@@ -76,7 +100,7 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
               
               {/* Description */}
               <p className="text-gray-600 mb-4 line-clamp-2">
-                {book.description}
+                {book.short_description}
               </p>
               
               {/* Actions */}
@@ -84,9 +108,9 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
                 <div className="flex space-x-2">
                   <button
                     onClick={handleAddToCart}
-                    disabled={!book.inStock}
+                    disabled={(book.stock_status !== "In Stock")}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                      book.inStock
+                      (book.stock_status === "In Stock")
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     }`}
@@ -129,12 +153,12 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
           
           {/* Badges */}
           <div className="absolute top-3 right-3 flex flex-col space-y-2">
-            {!book.inStock && (
+            {(book.stock_status !== "In Stock") && (
               <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
                 Out of Stock
               </span>
             )}
-            {book.price < 15 && (
+            {book.current_price < 15 && (
               <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                 Sale
               </span>
@@ -146,9 +170,9 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
             <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 space-x-2">
               <button
                 onClick={handleAddToCart}
-                disabled={!book.inStock}
+                disabled={(book.stock_status !== "In Stock")}
                 className={`p-3 rounded-full shadow-lg transition-all ${
-                  book.inStock
+                  (book.stock_status === "In Stock")
                     ? 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-110'
                     : 'bg-gray-400 text-white cursor-not-allowed'
                 }`}
@@ -169,7 +193,7 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
         <div className="p-4">
           {/* Category */}
           <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full mb-2">
-            {book.category}
+            {book.categories[0]?.name}
           </span>
           
           {/* Title */}
@@ -187,7 +211,7 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
                 <Star
                   key={i}
                   className={`w-4 h-4 ${
-                    i < Math.floor(book.rating)
+                    i < Math.floor(book.average_rating)
                       ? 'fill-yellow-400 text-yellow-400'
                       : 'fill-gray-300 text-gray-300'
                   }`}
@@ -195,10 +219,10 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
               ))}
             </div>
             <span className="ml-2 text-sm text-gray-500">
-              {book.rating.toFixed(1)}
+              {book.review_count}
             </span>
             <span className="ml-2 text-sm text-gray-400">
-              ({book.reviews.toLocaleString()})
+              {new Date(book.publication_date).toDateString()}
             </span>
           </div>
           
@@ -206,20 +230,20 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
           <div className="flex justify-between items-center">
             <div>
               <span className="text-2xl font-bold text-gray-900">
-                ${book.price.toFixed(2)}
+                ${book.current_price}
               </span>
               {book.originalPrice && (
                 <span className="ml-2 text-sm text-gray-400 line-through">
-                  ${book.originalPrice.toFixed(2)}
+                  ${book.list_price}
                 </span>
               )}
             </div>
             
             <button
               onClick={handleAddToCart}
-              disabled={!book.inStock}
+              disabled={(book.stock_status !== 'In Stock')}
               className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                book.inStock
+                (book.stock_status === 'In Stock')
                   ? 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
