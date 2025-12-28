@@ -310,7 +310,7 @@ class CategoryListResource(Resource):
                     'description': cat.description,
                     'display_order': cat.display_order,
                     'image_url': cat.image_url,
-                    'book_count': len(cat.books) if hasattr(cat, 'books') else 0
+                    'book_count': 0
                 } for cat in categories
             ]
         }, 200

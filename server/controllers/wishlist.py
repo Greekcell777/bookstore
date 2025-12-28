@@ -11,7 +11,7 @@ class WishlistResource(Resource):
     @jwt_required()
     def get(self):
         """Get user's wishlist"""
-        user_id = get_jwt_identity()['id']
+        user_id = get_jwt_identity()
         
         # Get or create wishlist
         wishlist = Wishlist.query.filter_by(user_id=user_id).first()

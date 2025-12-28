@@ -1,143 +1,166 @@
 import React, { useState } from 'react';
-import { Heart, ShoppingCart, Eye, X, Star, Filter, SortAsc, Grid, List } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+  Heart, 
+  ShoppingCart, 
+  Eye, 
+  X, 
+  Star, 
+  Filter, 
+  Grid, 
+  List,
+  Loader2,
+  AlertCircle
+} from 'lucide-react';
+import { useBookStore } from '../components/BookstoreContext'; // Add this import
 
 const WishlistPage = () => {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('grid');
-  const [wishlistItems, setWishlistItems] = useState([
-    {
-      id: 1,
-      title: 'The Silent Patient',
-      author: 'Alex Michaelides',
-      price: 29.99,
-      originalPrice: 34.99,
-      rating: 4.5,
-      reviews: 1245,
-      image: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400',
-      inStock: true,
-      category: 'Mystery & Thriller'
-    },
-    {
-      id: 2,
-      title: 'Atomic Habits',
-      author: 'James Clear',
-      price: 24.99,
-      originalPrice: 27.99,
-      rating: 4.7,
-      reviews: 2890,
-      image: 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?w=400',
-      inStock: true,
-      category: 'Self-Help'
-    },
-    {
-      id: 3,
-      title: 'Project Hail Mary',
-      author: 'Andy Weir',
-      price: 27.99,
-      originalPrice: 29.99,
-      rating: 4.8,
-      reviews: 1876,
-      image: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400',
-      inStock: false,
-      category: 'Science Fiction'
-    },
-    {
-      id: 4,
-      title: 'The Midnight Library',
-      author: 'Matt Haig',
-      price: 19.99,
-      originalPrice: null,
-      rating: 4.4,
-      reviews: 1567,
-      image: 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=400',
-      inStock: true,
-      category: 'Fiction'
-    },
-    {
-      id: 5,
-      title: 'Dune',
-      author: 'Frank Herbert',
-      price: 29.99,
-      originalPrice: 34.99,
-      rating: 4.6,
-      reviews: 3256,
-      image: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400',
-      inStock: true,
-      category: 'Science Fiction'
-    },
-    {
-      id: 6,
-      title: 'The Hobbit',
-      author: 'J.R.R. Tolkien',
-      price: 22.99,
-      originalPrice: 26.99,
-      rating: 4.8,
-      reviews: 4321,
-      image: 'https://images.unsplash.com/photo-1621351183012-e2f9972dd9bf?w=400',
-      inStock: true,
-      category: 'Fantasy'
-    },
-    {
-      id: 7,
-      title: 'Educated',
-      author: 'Tara Westover',
-      price: 26.99,
-      originalPrice: null,
-      rating: 4.7,
-      reviews: 1987,
-      image: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400',
-      inStock: true,
-      category: 'Memoir'
-    },
-    {
-      id: 8,
-      title: 'Sapiens',
-      author: 'Yuval Noah Harari',
-      price: 31.99,
-      originalPrice: 35.99,
-      rating: 4.5,
-      reviews: 3456,
-      image: 'https://images.unsplash.com/photo-1531346688376-ab6275c4725e?w=400',
-      inStock: false,
-      category: 'History'
-    }
-  ]);
-
-  const categories = ['All', 'Fiction', 'Science Fiction', 'Mystery & Thriller', 'Self-Help', 'Fantasy', 'Memoir', 'History'];
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('date');
+  
+  // Use SimpleBookStore context
+  const { 
+    wishlist, 
+    removeFromWishlist, 
+    addToCart,
+    isLoading,
+    error,
+    user,
+    wishlistCount
+  } = useBookStore();
 
-  const removeFromWishlist = (id) => {
-    setWishlistItems(items => items.filter(item => item.id !== id));
-  };
+  const categories = ['All', 'Fiction', 'Science Fiction', 'Mystery & Thriller', 'Self-Help', 'Fantasy', 'Memoir', 'History'];
 
-  const addToCart = (item) => {
-    alert(`Added "${item.title}" to cart!`);
-    // Here you would typically add to cart via context/state
-  };
-
-  const moveAllToCart = () => {
-    const inStockItems = wishlistItems.filter(item => item.inStock);
-    alert(`Added ${inStockItems.length} in-stock items to cart!`);
-  };
-
-  const filteredItems = selectedCategory === 'All' 
-    ? wishlistItems 
-    : wishlistItems.filter(item => item.category === selectedCategory);
-
-  const sortedItems = [...filteredItems].sort((a, b) => {
-    switch (sortBy) {
-      case 'price-low':
-        return a.price - b.price;
-      case 'price-high':
-        return b.price - a.price;
-      case 'rating':
-        return b.rating - a.rating;
-      case 'title':
-        return a.title.localeCompare(b.title);
-      default:
-        return 0;
+  const handleAddToCart = async (item) => {
+    if (!user) {
+      alert('Please login to add items to cart');
+      navigate('/login', { 
+        state: { redirectTo: '/wishlist' }
+      });
+      return;
     }
-  });
+    
+    try {
+      const bookId = item.book?.id || item.bookId || item.id;
+      await addToCart(bookId, 1);
+      alert(`Added "${item.title || item.book?.title}" to cart!`);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      alert('Failed to add item to cart');
+    }
+  };
+
+  const handleRemoveFromWishlist = async (item) => {
+    try {
+      const itemId = item.id || item.bookId;
+      await removeFromWishlist(itemId);
+    } catch (err) {
+      console.error('Error removing from wishlist:', err);
+      alert('Failed to remove item from wishlist');
+    }
+  };
+
+  const moveAllToCart = async () => {
+    if (!user) {
+      alert('Please login to add items to cart');
+      navigate('/login', { 
+        state: { redirectTo: '/wishlist' }
+      });
+      return;
+    }
+    
+    try {
+      const inStockItems = wishlist.filter(item => 
+        item.inStock !== false && item.book?.inStock !== false
+      );
+      
+      if (inStockItems.length === 0) {
+        alert('No in-stock items in your wishlist');
+        return;
+      }
+      
+      // Add each in-stock item to cart
+      for (const item of inStockItems) {
+        const bookId = item.book?.id || item.bookId || item.id;
+        await addToCart(bookId, 1);
+      }
+      
+      alert(`Added ${inStockItems.length} in-stock items to cart!`);
+    } catch (err) {
+      console.error('Error adding all to cart:', err);
+      alert('Failed to add items to cart');
+    }
+  };
+
+  // Filter and sort wishlist items
+  const getFilteredAndSortedItems = () => {
+    // First, convert wishlist items to a consistent format
+    const formattedItems = wishlist.map(item => {
+      const book = item.book || item;
+      return {
+        id: item.id || book.id,
+        bookId: item.bookId || book.id,
+        title: book.title || item.title,
+        author: book.author || item.author,
+        price: book.sale_price || book.list_price || item.price || 0,
+        originalPrice: book.list_price || item.originalPrice,
+        rating: book.average_rating || item.rating || 0,
+        reviews: book.review_count || item.reviews || 0,
+        image: book.cover_image_url || book.image || item.image || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400',
+        inStock: item.inStock !== undefined ? item.inStock : (book.inStock !== false),
+        category: book.categories?.[0]?.name || item.category || 'Uncategorized'
+      };
+    });
+
+    // Filter by category
+    const filtered = selectedCategory === 'All' 
+      ? formattedItems 
+      : formattedItems.filter(item => item.category === selectedCategory);
+
+    // Sort items
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'price-low':
+          return a.price - b.price;
+        case 'price-high':
+          return b.price - a.price;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'title':
+          return a.title.localeCompare(b.title);
+        default: // 'date' or default
+          return 0; // You might want to sort by date added if your data has that
+      }
+    });
+
+    return sorted;
+  };
+
+  const sortedItems = getFilteredAndSortedItems();
+  
+  // Calculate totals
+  const totalValue = wishlist.reduce((sum, item) => {
+    const price = item.book?.sale_price || item.book?.list_price || item.price || 0;
+    return sum + price;
+  }, 0);
+  
+  const inStockCount = wishlist.filter(item => 
+    item.inStock !== false && item.book?.inStock !== false
+  ).length;
+
+  // Loading state
+  if (isLoading && wishlist.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading wishlist...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -150,13 +173,20 @@ const WishlistPage = () => {
               <p className="text-gray-600 mt-2">Save books you want to read later</p>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={moveAllToCart}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center"
-              >
-                <ShoppingCart size={20} className="mr-2" />
-                Add All to Cart
-              </button>
+              {wishlist.length > 0 && (
+                <button
+                  onClick={moveAllToCart}
+                  disabled={isLoading || !user}
+                  className={`px-4 py-2 rounded-lg transition flex items-center ${
+                    user 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  <ShoppingCart size={20} className="mr-2" />
+                  {isLoading ? 'Processing...' : 'Add All to Cart'}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -167,7 +197,7 @@ const WishlistPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm opacity-90">Total Items</p>
-                <p className="text-2xl font-bold">{wishlistItems.length}</p>
+                <p className="text-2xl font-bold">{wishlistCount || wishlist.length}</p>
               </div>
               <Heart size={32} className="opacity-80" />
             </div>
@@ -176,7 +206,7 @@ const WishlistPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm opacity-90">In Stock</p>
-                <p className="text-2xl font-bold">{wishlistItems.filter(item => item.inStock).length}</p>
+                <p className="text-2xl font-bold">{inStockCount}</p>
               </div>
               <ShoppingCart size={32} className="opacity-80" />
             </div>
@@ -186,13 +216,21 @@ const WishlistPage = () => {
               <div>
                 <p className="text-sm opacity-90">Total Value</p>
                 <p className="text-2xl font-bold">
-                  ${wishlistItems.reduce((sum, item) => sum + item.price, 0).toFixed(2)}
+                  ${totalValue.toFixed(2)}
                 </p>
               </div>
               <Star size={32} className="opacity-80" />
             </div>
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
+            <AlertCircle className="text-red-500 mr-3 mt-0.5" size={20} />
+            <span className="text-red-700">{error}</span>
+          </div>
+        )}
 
         {/* Controls */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -201,7 +239,11 @@ const WishlistPage = () => {
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full ${selectedCategory === category ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border'}`}
+                className={`px-4 py-2 rounded-full ${
+                  selectedCategory === category 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border'
+                }`}
               >
                 {category}
               </button>
@@ -247,9 +289,12 @@ const WishlistPage = () => {
             <Heart size={64} className="mx-auto text-gray-300 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Your wishlist is empty</h3>
             <p className="text-gray-600 mb-6">Start adding books you want to save for later!</p>
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+            <Link 
+              to="/catalog"
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition inline-block"
+            >
               Browse Books
-            </button>
+            </Link>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -264,17 +309,18 @@ const WishlistPage = () => {
                     />
                   </div>
                   <button
-                    onClick={() => removeFromWishlist(item.id)}
-                    className="absolute top-3 right-3 bg-white p-2 rounded-full shadow hover:bg-red-50 hover:text-red-600 transition"
+                    onClick={() => handleRemoveFromWishlist(item)}
+                    disabled={isLoading}
+                    className="absolute top-3 right-3 bg-white p-2 rounded-full shadow hover:bg-red-50 hover:text-red-600 transition disabled:opacity-50"
                   >
-                    <X size={18} />
+                    {isLoading ? <Loader2 size={18} className="animate-spin" /> : <X size={18} />}
                   </button>
                   {!item.inStock && (
                     <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
                       Out of Stock
                     </div>
                   )}
-                  {item.originalPrice && (
+                  {item.originalPrice && item.originalPrice > item.price && (
                     <div className="absolute bottom-3 left-3 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
                       Save ${(item.originalPrice - item.price).toFixed(2)}
                     </div>
@@ -297,27 +343,34 @@ const WishlistPage = () => {
                         />
                       ))}
                     </div>
-                    <span className="text-sm text-gray-600">{item.rating}</span>
+                    <span className="text-sm text-gray-600">{item.rating.toFixed(1)}</span>
                     <span className="text-sm text-gray-400">({item.reviews.toLocaleString()})</span>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xl font-bold text-gray-900">${item.price.toFixed(2)}</p>
-                      {item.originalPrice && (
+                      {item.originalPrice && item.originalPrice > item.price && (
                         <p className="text-sm text-gray-400 line-through">${item.originalPrice.toFixed(2)}</p>
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <button className="p-2 text-gray-600 hover:text-blue-600">
-                        <Eye size={20} />
-                      </button>
-                      <button
-                        onClick={() => addToCart(item)}
-                        disabled={!item.inStock}
-                        className={`p-2 rounded ${item.inStock ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                      <Link 
+                        to={`/book/${item.bookId || item.id}`}
+                        className="p-2 text-gray-600 hover:text-blue-600"
                       >
-                        <ShoppingCart size={20} />
+                        <Eye size={20} />
+                      </Link>
+                      <button
+                        onClick={() => handleAddToCart(item)}
+                        disabled={!item.inStock || isLoading || !user}
+                        className={`p-2 rounded ${
+                          item.inStock && user
+                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        {isLoading ? <Loader2 size={20} className="animate-spin" /> : <ShoppingCart size={20} />}
                       </button>
                     </div>
                   </div>
@@ -348,14 +401,14 @@ const WishlistPage = () => {
                         </span>
                         <div className="flex items-center">
                           <Star size={16} className="text-yellow-400 fill-yellow-400 mr-1" />
-                          <span className="text-sm font-medium">{item.rating}</span>
+                          <span className="text-sm font-medium">{item.rating.toFixed(1)}</span>
                           <span className="text-sm text-gray-500 ml-1">({item.reviews.toLocaleString()})</span>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-gray-900">${item.price.toFixed(2)}</p>
-                      {item.originalPrice && (
+                      {item.originalPrice && item.originalPrice > item.price && (
                         <p className="text-sm text-gray-400 line-through">${item.originalPrice.toFixed(2)}</p>
                       )}
                     </div>
@@ -369,23 +422,31 @@ const WishlistPage = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => removeFromWishlist(item.id)}
-                        className="text-gray-400 hover:text-red-600 transition flex items-center"
+                        onClick={() => handleRemoveFromWishlist(item)}
+                        disabled={isLoading}
+                        className="text-gray-400 hover:text-red-600 transition flex items-center disabled:opacity-50"
                       >
-                        <X size={18} className="mr-1" />
-                        Remove
+                        {isLoading ? <Loader2 size={18} className="animate-spin mr-1" /> : <X size={18} className="mr-1" />}
+                        {isLoading ? 'Removing...' : 'Remove'}
                       </button>
-                      <button className="px-4 py-2 border rounded-lg hover:bg-gray-50 transition flex items-center">
+                      <Link 
+                        to={`/book/${item.bookId || item.id}`}
+                        className="px-4 py-2 border rounded-lg hover:bg-gray-50 transition flex items-center"
+                      >
                         <Eye size={18} className="mr-2" />
                         View Details
-                      </button>
+                      </Link>
                       <button
-                        onClick={() => addToCart(item)}
-                        disabled={!item.inStock}
-                        className={`px-4 py-2 rounded-lg flex items-center ${item.inStock ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                        onClick={() => handleAddToCart(item)}
+                        disabled={!item.inStock || isLoading || !user}
+                        className={`px-4 py-2 rounded-lg flex items-center ${
+                          item.inStock && user
+                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}
                       >
                         <ShoppingCart size={18} className="mr-2" />
-                        Add to Cart
+                        {isLoading ? 'Adding...' : 'Add to Cart'}
                       </button>
                     </div>
                   </div>
@@ -395,19 +456,24 @@ const WishlistPage = () => {
           </div>
         )}
 
-        {/* Recommendations */}
+        {/* Recommendations - Optional: You can fetch from context if available */}
         {sortedItems.length > 0 && (
           <div className="mt-12">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Based on Your Wishlist</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition">
-                  <div className="h-40 bg-gray-100 rounded-lg mb-3"></div>
+                  <div className="h-40 bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
+                    <span className="text-gray-400">Book Image</span>
+                  </div>
                   <h3 className="font-semibold text-gray-900 line-clamp-1">Recommended Book {i}</h3>
                   <p className="text-sm text-gray-600 mb-2">Author Name</p>
                   <div className="flex items-center justify-between">
                     <p className="font-bold text-gray-900">$24.99</p>
-                    <button className="p-2 text-gray-400 hover:text-red-600">
+                    <button 
+                      disabled={!user}
+                      className={`p-2 ${user ? 'text-gray-400 hover:text-red-600' : 'text-gray-300 cursor-not-allowed'}`}
+                    >
                       <Heart size={18} />
                     </button>
                   </div>

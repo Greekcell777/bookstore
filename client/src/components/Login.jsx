@@ -1,16 +1,11 @@
-import React, { useState } from 'react';
+// In your Login component - Updated to work with BookStoreContext
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  AlertCircle,
-  BookOpen,
-  ChevronLeft,
-  Loader2
+  Mail, Lock, Eye, EyeOff, AlertCircle,
+  BookOpen, ChevronLeft, Loader2
 } from 'lucide-react';
-import { useAuth } from './AuthContext';
+import { useBookStore } from './BookstoreContext'; // Use BookStoreContext directly
 
 const Login = () => {
   const navigate = useNavigate();
@@ -24,9 +19,17 @@ const Login = () => {
     rememberMe: false
   });
 
-  const {login} = useAuth()
+  // Use BookStoreContext instead of AuthContext
+  const { login, state } = useBookStore();
+  
+  // Display message from redirect
+  useEffect(() => {
+    if (location.state?.message) {
+      alert(location.state.message);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
-  // Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -34,76 +37,99 @@ const Login = () => {
       [name]: type === 'checkbox' ? checked : value
     }));
     
-    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setErrors({});
+  e.preventDefault();
+  setIsLoading(true);
+  setErrors({});
 
-    // Simple validation
-    const newErrors = {};
-    if (!formData.email) newErrors.email = 'Email is required';
-    if (!formData.password) newErrors.password = 'Password is required';
-    else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+  // Validation
+  const newErrors = {};
+  if (!formData.email) newErrors.email = 'Email is required';
+  if (!formData.password) newErrors.password = 'Password is required';
+  else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // Simulate API call
-      const response = await login(formData)
-
-      if (response.user) {
-        // Store token and user data
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('booknook_user', JSON.stringify(response.user));
-        
-        // Show success message
-        alert('Login successful! You are now logged in.');
-        
-        // Redirect based on previous location or to home
-        const from = location.state?.from?.pathname || '/';
-        navigate(from, { replace: true });
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    setIsLoading(false);
+    return;
+  }
+  
+  try {
+    // FIXED: Added await here
+    const response = await login(formData);
+    console.log('Login response:', response);
+    
+    // Login successful - check for pending actions
+    const pendingActions = JSON.parse(localStorage.getItem('pendingActions') || '[]');
+    const redirectAfterLogin = localStorage.getItem('redirectAfterLogin') || '/';
+    
+    // Show success message
+    if (pendingActions.length > 0) {
+      const cartActions = pendingActions.filter(a => a.type === 'addToCart');
+      const wishlistActions = pendingActions.filter(a => a.type === 'addToWishlist');
       
-      } else {
-        throw new Error(response.error || 'Login failed');
+      let message = 'Login successful!';
+      if (cartActions.length > 0) {
+        message += `\nAdded ${cartActions.length} item${cartActions.length > 1 ? 's' : ''} to your cart.`;
       }
+      if (wishlistActions.length > 0) {
+        message += `\nAdded ${wishlistActions.length} item${wishlistActions.length > 1 ? 's' : ''} to your wishlist.`;
+      }
+      alert(message);
       
-    } catch (error) {
-      setErrors({ general: `Invalid email or password. Please try again.${error}` });
-    } finally {
-      setIsLoading(false);
+      // Clear pending actions
+      localStorage.removeItem('pendingActions');
+      localStorage.removeItem('redirectAfterLogin');
+      
+      // Redirect to original page
+      navigate(redirectAfterLogin, { replace: true });
+    } else {
+      // No pending actions, redirect based on location state or home
+      const from = location.state?.redirectTo || 
+                  location.state?.from?.pathname || 
+                  '/';
+      navigate(from, { replace: true });
     }
-  };
-
-
-  // Handle forgot password
+    
+  } catch (error) {
+    console.error('Login error:', error);
+    setErrors({ 
+      general: error.response?.data?.message || error.message || 'Invalid email or password. Please try again.' 
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
   const handleForgotPassword = () => {
     navigate('/forgot-password');
+  };
+
+  // Demo login
+  const handleDemoLogin = async () => {
+    setFormData({
+      email: 'demo@booknook.com',
+      password: 'demo123',
+      rememberMe: false
+    });
+    
+    setTimeout(() => {
+      document.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true }));
+    }, 100);
   };
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Back to Home */}
-        <Link
-          to="/"
-          className="inline-flex items-center text-sm text-gray-600 hover:text-blue-600 mb-8 group"
-        >
+        <Link to="/" className="inline-flex items-center text-sm text-gray-600 hover:text-blue-600 mb-8 group">
           <ChevronLeft size={16} className="mr-1 group-hover:-translate-x-1 transition-transform" />
           Back to home
         </Link>
 
-        {/* Login Card */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {/* Header */}
           <div className="p-8 text-center">
@@ -112,6 +138,15 @@ const Login = () => {
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
             <p className="text-gray-600">Sign in to your BookNook account</p>
+            
+            {/* Pending actions notice */}
+            {localStorage.getItem('pendingActions') && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  You have pending actions that will be completed after login.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Error Message */}
@@ -122,38 +157,25 @@ const Login = () => {
             </div>
           )}
 
-          {/* Social Login */}
-          {/* <div className="px-8 mb-6">
-            <div className="grid grid-cols-3 gap-3">
-              <button
-                onClick={() => handleSocialLogin('google')}
-                className="flex items-center justify-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Google size={20} className="text-gray-600" /> 
-              </button>
-              <button
-                onClick={() => handleSocialLogin('github')}
-                className="flex items-center justify-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Github size={20} className="text-gray-600" />
-              </button>
-              <button
-                onClick={() => handleSocialLogin('twitter')}
-                className="flex items-center justify-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Twitter size={20} className="text-gray-600" />
-              </button>
-            </div>
+          {/* Demo Login */}
+          <div className="px-8 mb-6">
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              className="w-full py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors border border-gray-300"
+            >
+              Try Demo Account
+            </button>
             
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">Or continue with</span>
+                <span className="px-4 bg-white text-gray-500">Or sign in with email</span>
               </div>
             </div>
-          </div> */}
+          </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="px-8 pb-8">

@@ -11,7 +11,7 @@ class CartResource(Resource):
     @jwt_required()
     def get(self):
         """Get user's cart with items"""
-        user_id = get_jwt_identity()['id']
+        user_id = get_jwt_identity()
         print(user_id)
         # Get or create cart
         cart = Cart.query.filter_by(user_id=user_id, is_active=True).first()
@@ -60,7 +60,7 @@ class CartResource(Resource):
     @jwt_required()
     def delete(self):
         """Clear entire cart"""
-        user_id = get_jwt_identity()['id']
+        user_id = get_jwt_identity()
         
         cart = Cart.query.filter_by(user_id=user_id, is_active=True).first()
         if not cart:
@@ -83,13 +83,14 @@ class CartItemResource(Resource):
     @jwt_required()
     def post(self):
         """Add item to cart"""
-        user_id = get_jwt_identity()['id']
+        user_id = get_jwt_identity()
         
         data = request.get_json()
+        
         if not data:
             return {'error': 'No data provided'}, 400
         
-        book_id = data.get('book_id')
+        book_id = data.get('bookId')
         quantity = data.get('quantity', 1)
         
         if not book_id:
@@ -97,6 +98,7 @@ class CartItemResource(Resource):
         
         # Validate book exists and is available
         book = Book.query.get(book_id)
+        print(book)
         if not book:
             return {'error': 'Book not found'}, 404
         
@@ -148,7 +150,7 @@ class CartItemResource(Resource):
     @jwt_required()
     def put(self, item_id):
         """Update cart item quantity"""
-        user_id = get_jwt_identity()['id']
+        user_id = get_jwt_identity()
         
         data = request.get_json()
         if not data:
@@ -194,7 +196,7 @@ class CartItemResource(Resource):
     @jwt_required()
     def delete(self, item_id):
         """Remove item from cart"""
-        user_id = get_jwt_identity()['id']
+        user_id = get_jwt_identity()
         
         # Find cart item
         cart_item = CartItem.query.get(item_id)

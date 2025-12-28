@@ -5,11 +5,14 @@ import './index.css'
 import App from './App.jsx'
 import { router } from './components/routes.jsx'
 import { AuthProvider } from './components/AuthContext.jsx'
+import { BookStoreProvider } from './components/BookstoreContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <RouterProvider router={router}/>
-    </AuthProvider>
+    <BookStoreProvider>
+      <AuthProvider>
+        <RouterProvider router={router}/>
+      </AuthProvider>
+    </BookStoreProvider>
   </StrictMode>
 )

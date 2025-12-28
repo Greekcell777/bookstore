@@ -14,48 +14,30 @@ import {
   AlertCircle,
   Tag,
   Lock,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
+import { useBookStore } from '../components/BookstoreContext'; // Add this import
 
 const Cart = () => {
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      title: "The Midnight Library: A Novel",
-      author: "Matt Haig",
-      price: 24.99,
-      originalPrice: 29.99,
-      quantity: 1,
-      image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop",
-      category: "Fiction",
-      inStock: true,
-      maxQuantity: 5
-    },
-    {
-      id: 2,
-      title: "Atomic Habits: An Easy & Proven Way to Build Good Habits & Break Bad Ones",
-      author: "James Clear",
-      price: 27.99,
-      quantity: 2,
-      image: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=300&h=400&fit=crop",
-      category: "Self-Help",
-      inStock: true,
-      maxQuantity: 3
-    },
-    {
-      id: 3,
-      title: "Project Hail Mary",
-      author: "Andy Weir",
-      price: 29.99,
-      quantity: 1,
-      image: "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=300&h=400&fit=crop",
-      category: "Science Fiction",
-      inStock: false,
-      maxQuantity: 0
-    }
-  ]);
-
+  
+  // Use SimpleBookStore context
+  const { 
+    cart, 
+    cartTotal,
+    cartItemCount,
+    removeFromCart, 
+    clearCart,
+    addToCart,
+    updateCartItem,
+    isLoading,
+    error,
+    user
+  } = useBookStore();
+  
+  console.log(cartTotal)
+  
   const [suggestedItems, setSuggestedItems] = useState([
     {
       id: 4,
@@ -75,9 +57,14 @@ const Cart = () => {
     }
   ]);
 
-  // Calculate totals
+  // Calculate totals from context cart
   const calculateTotals = () => {
-    const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Use cartTotal from context for subtotal
+    const subtotal = cartTotal || cart.reduce((sum, item) => {
+      const price = item.price || item.book?.sale_price || item.book?.list_price || 0;
+      return sum + (price * (item.quantity || 1));
+    }, 0);
+    
     const shipping = subtotal > 35 ? 0 : 5.99;
     const tax = subtotal * 0.08; // 8% tax
     const total = subtotal + shipping + tax;
@@ -86,58 +73,104 @@ const Cart = () => {
   };
 
   const { subtotal, shipping, tax, total } = calculateTotals();
-  const itemCount = cartItems.reduce((count, item) => count + item.quantity, 0);
+  const itemCount = cartItemCount || cart.reduce((count, item) => count + (item.quantity || 1), 0);
 
-  // Update quantity
-  const updateQuantity = (id, newQuantity) => {
+  // Update quantity using context
+  const updateQuantity = async (itemId, bookId, newQuantity) => {
     if (newQuantity < 1) {
-      removeItem(id);
+      await removeItem(itemId, bookId);
       return;
     }
     
-    const item = cartItems.find(item => item.id === id);
-    if (item && newQuantity > item.maxQuantity) {
+    // Check if item exists and validate max quantity
+    const item = cart.find(item => item.id === itemId || item.bookId === bookId);
+    if (item && newQuantity > (item.maxQuantity || 10)) {
+      alert(`Maximum quantity is ${item.maxQuantity || 10}`);
       return;
     }
     
-    setCartItems(prev => 
-      prev.map(item => 
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
+    try {
+      // Use context function to update cart item
+      if (updateCartItem) {
+        await updateCartItem(itemId, newQuantity);
+      } else {
+        // Fallback to addToCart if updateCartItem doesn't exist
+        console.warn('updateCartItem not available in context');
+        // You might need to implement this function in your context
+      }
+    } catch (err) {
+      console.error('Error updating quantity:', err);
+      alert('Failed to update quantity');
+    }
   };
 
-  // Remove item
-  const removeItem = (id) => {
-    setCartItems(prev => prev.filter(item => item.id !== id));
+  // Remove item using context
+  const removeItem = async (itemId, bookId) => {
+    try {
+      await removeFromCart(itemId || bookId);
+    } catch (err) {
+      console.error('Error removing item:', err);
+      alert('Failed to remove item');
+    }
   };
 
   // Move to wishlist
-  const moveToWishlist = (id) => {
-    const item = cartItems.find(item => item.id === id);
-    if (item) {
-      // Here you would typically call an API
-      removeItem(id);
+  const moveToWishlist = async (item) => {
+    if (!user) {
+      alert('Please login to save items to wishlist');
+      navigate('/login', { 
+        state: { redirectTo: '/cart' }
+      });
+      return;
+    }
+    
+    try {
+      // First add to wishlist
+      await addToWishlist(item.bookId || item.book?.id);
+      // Then remove from cart
+      await removeFromCart(item.id);
+    } catch (err) {
+      console.error('Error moving to wishlist:', err);
+      alert('Failed to move item to wishlist');
     }
   };
 
   // Add suggested item
-  const addSuggestedItem = (item) => {
-    const exists = cartItems.find(cartItem => cartItem.id === item.id);
-    if (exists) {
-      updateQuantity(item.id, exists.quantity + 1);
-    } else {
-      setCartItems(prev => [...prev, { ...item, quantity: 1, inStock: true, maxQuantity: 5 }]);
+  const addSuggestedItem = async (item) => {
+    if (!user) {
+      alert('Please login to add items to cart');
+      navigate('/login', { 
+        state: { redirectTo: '/cart' }
+      });
+      return;
+    }
+    
+    try {
+      await addToCart(item.id, 1);
+    } catch (err) {
+      console.error('Error adding suggested item:', err);
+      alert('Failed to add item to cart');
     }
   };
 
-  // Clear cart
-  const clearCart = () => {
-    setCartItems([]);
-  };
-
-  // Checkout
+  // Handle checkout
   const handleCheckout = () => {
+    if (!user) {
+      alert('Please login to checkout');
+      navigate('/login', { 
+        state: { 
+          redirectTo: '/checkout',
+          message: 'Please login to complete your purchase'
+        }
+      });
+      return;
+    }
+    
+    if (cart.length === 0) {
+      alert('Your cart is empty');
+      return;
+    }
+    
     navigate('/checkout');
   };
 
@@ -146,8 +179,20 @@ const Cart = () => {
     navigate('/catalog');
   };
 
+  // Loading state
+  if (isLoading && cart.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading cart...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Empty cart state
-  if (cartItems.length === 0) {
+  if (cart.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Navigation */}
@@ -213,9 +258,14 @@ const Cart = () => {
                           <span className="font-bold text-lg">${item.price.toFixed(2)}</span>
                           <button
                             onClick={() => addSuggestedItem(item)}
-                            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                            disabled={!user}
+                            className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                              user 
+                                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
                           >
-                            Add to Cart
+                            {user ? 'Add to Cart' : 'Login to Add'}
                           </button>
                         </div>
                       </div>
@@ -250,10 +300,15 @@ const Cart = () => {
             
             <button
               onClick={clearCart}
-              className="flex items-center text-sm text-red-600 hover:text-red-700"
+              disabled={isLoading}
+              className="flex items-center text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
             >
-              <Trash2 size={16} className="mr-1" />
-              Clear Cart
+              {isLoading ? (
+                <Loader2 size={16} className="animate-spin mr-1" />
+              ) : (
+                <Trash2 size={16} className="mr-1" />
+              )}
+              {isLoading ? 'Clearing...' : 'Clear Cart'}
             </button>
           </div>
         </div>
@@ -271,119 +326,126 @@ const Cart = () => {
 
               {/* Cart Items List */}
               <div className="divide-y divide-gray-100">
-                {cartItems.map(item => (
-                  <div key={item.id} className="p-6 hover:bg-gray-50/50 transition-colors">
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-6">
-                      {/* Book Image */}
-                      <div className="w-24 h-32 flex-shrink-0">
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      </div>
-
-                      {/* Book Details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <h3 className="font-semibold text-gray-900 mb-1">
-                                  <Link to={`/book/${item.id}`} className="hover:text-blue-600 transition-colors">
-                                    {item.title}
-                                  </Link>
-                                </h3>
-                                <p className="text-gray-600 text-sm mb-2">{item.author}</p>
-                                <span className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full mb-3">
-                                  {item.category}
-                                </span>
-                              </div>
-                              
-                              {/* Price */}
-                              <div className="text-right">
-                                <div className="text-2xl font-bold text-gray-900 mb-2">
-                                  ${(item.price * item.quantity).toFixed(2)}
-                                </div>
-                                {item.originalPrice && (
-                                  <div className="text-sm text-gray-500 line-through">
-                                    ${(item.originalPrice * item.quantity).toFixed(2)}
-                                  </div>
-                                )}
-                                <div className="text-sm text-gray-600">
-                                  ${item.price.toFixed(2)} each
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Stock Status */}
-                            <div className="flex items-center mt-4">
-                              {item.inStock ? (
-                                <div className="flex items-center text-green-600">
-                                  <Package size={16} className="mr-2" />
-                                  <span className="text-sm">In Stock</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center text-red-600">
-                                  <AlertCircle size={16} className="mr-2" />
-                                  <span className="text-sm">Out of Stock</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                {cart.map(item => {
+                  // Extract book data from cart item
+                  const book = item.book || item;
+                  const bookId = book.id || item.bookId;
+                  const cartItemId = item.id || bookId;
+                  const title = book.title || item.title;
+                  const author = book.author || item.author;
+                  const price = book.sale_price || book.list_price || item.price || 0;
+                  const image = book.cover_image_url || book.image || item.image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop';
+                  const category = book.categories?.[0]?.name || item.category || 'Uncategorized';
+                  const inStock = item.inStock !== undefined ? item.inStock : true;
+                  const quantity = item.quantity || 1;
+                  
+                  return (
+                    <div key={cartItemId} className="p-6 hover:bg-gray-50/50 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-6">
+                        {/* Book Image */}
+                        <div className="w-24 h-32 flex-shrink-0">
+                          <img
+                            src={image}
+                            alt={title}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex flex-wrap items-center justify-between gap-4 mt-6 pt-6 border-t border-gray-100">
-                          {/* Quantity Controls */}
-                          <div className="flex items-center space-x-4">
-                            <div className="flex items-center border border-gray-300 rounded-lg">
-                              <button
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                disabled={item.quantity <= 1}
-                                className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                <Minus size={16} />
-                              </button>
-                              <span className="px-4 py-2 min-w-[50px] text-center font-medium">
-                                {item.quantity}
-                              </span>
-                              <button
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                disabled={!item.inStock || item.quantity >= item.maxQuantity}
-                                className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                <Plus size={16} />
-                              </button>
-                            </div>
-                            
-                            <div className="text-sm text-gray-600">
-                              Max: {item.maxQuantity}
+                        {/* Book Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <h3 className="font-semibold text-gray-900 mb-1">
+                                    <Link to={`/book/${bookId}`} className="hover:text-blue-600 transition-colors">
+                                      {title}
+                                    </Link>
+                                  </h3>
+                                  <p className="text-gray-600 text-sm mb-2">{author}</p>
+                                  <span className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full mb-3">
+                                    {category}
+                                  </span>
+                                </div>
+                                
+                                {/* Price */}
+                                <div className="text-right">
+                                  <div className="text-2xl font-bold text-gray-900 mb-2">
+                                    ${(price * quantity).toFixed(2)}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    ${price.toFixed(2)} each
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Stock Status */}
+                              <div className="flex items-center mt-4">
+                                {inStock ? (
+                                  <div className="flex items-center text-green-600">
+                                    <Package size={16} className="mr-2" />
+                                    <span className="text-sm">In Stock</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center text-red-600">
+                                    <AlertCircle size={16} className="mr-2" />
+                                    <span className="text-sm">Out of Stock</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
 
-                          {/* Action Buttons */}
-                          <div className="flex items-center space-x-4">
-                            <button
-                              onClick={() => moveToWishlist(item.id)}
-                              className="flex items-center text-sm text-gray-600 hover:text-red-600 transition-colors"
-                            >
-                              <Heart size={16} className="mr-1" />
-                              Save for later
-                            </button>
-                            <button
-                              onClick={() => removeItem(item.id)}
-                              className="flex items-center text-sm text-red-600 hover:text-red-700 transition-colors"
-                            >
-                              <Trash2 size={16} className="mr-1" />
-                              Remove
-                            </button>
+                          {/* Actions */}
+                          <div className="flex flex-wrap items-center justify-between gap-4 mt-6 pt-6 border-t border-gray-100">
+                            {/* Quantity Controls */}
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center border border-gray-300 rounded-lg">
+                                <button
+                                  onClick={() => updateQuantity(cartItemId, bookId, quantity - 1)}
+                                  disabled={quantity <= 1 || isLoading}
+                                  className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <Minus size={16} />
+                                </button>
+                                <span className="px-4 py-2 min-w-[50px] text-center font-medium">
+                                  {quantity}
+                                </span>
+                                <button
+                                  onClick={() => updateQuantity(cartItemId, bookId, quantity + 1)}
+                                  disabled={!inStock || isLoading}
+                                  className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <Plus size={16} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center space-x-4">
+                              <button
+                                onClick={() => moveToWishlist(item)}
+                                disabled={isLoading}
+                                className="flex items-center text-sm text-gray-600 hover:text-red-600 transition-colors disabled:opacity-50"
+                              >
+                                <Heart size={16} className="mr-1" />
+                                Save for later
+                              </button>
+                              <button
+                                onClick={() => removeItem(cartItemId, bookId)}
+                                disabled={isLoading}
+                                className="flex items-center text-sm text-red-600 hover:text-red-700 transition-colors disabled:opacity-50"
+                              >
+                                <Trash2 size={16} className="mr-1" />
+                                Remove
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -394,7 +456,10 @@ const Cart = () => {
                 <Truck className="text-blue-600" size={24} />
               </div>
               <p className="text-gray-600 mb-4">
-                Add ${(35 - subtotal).toFixed(2)} more to your order to qualify for free shipping!
+                {subtotal >= 35 
+                  ? '🎉 Congrats! You qualify for free shipping!'
+                  : `Add $${(35 - subtotal).toFixed(2)} more to your order to qualify for free shipping!`
+                }
               </p>
               <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 
@@ -426,9 +491,14 @@ const Cart = () => {
                         <span className="font-bold text-lg">${item.price.toFixed(2)}</span>
                         <button
                           onClick={() => addSuggestedItem(item)}
-                          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                          disabled={!user}
+                          className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                            user 
+                              ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          }`}
                         >
-                          Add to Cart
+                          {user ? 'Add to Cart' : 'Login to Add'}
                         </button>
                       </div>
                     </div>
@@ -496,11 +566,25 @@ const Cart = () => {
                   <div className="mt-6 space-y-4">
                     <button
                       onClick={handleCheckout}
-                      className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-300 flex items-center justify-center"
+                      disabled={isLoading || cart.length === 0}
+                      className={`w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center ${
+                        cart.length === 0 || isLoading 
+                          ? 'opacity-50 cursor-not-allowed' 
+                          : 'hover:opacity-90'
+                      }`}
                     >
-                      <Lock size={20} className="mr-2" />
-                      Proceed to Checkout
-                      <ArrowRight size={20} className="ml-2" />
+                      {isLoading ? (
+                        <>
+                          <Loader2 size={20} className="animate-spin mr-2" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Lock size={20} className="mr-2" />
+                          Proceed to Checkout
+                          <ArrowRight size={20} className="ml-2" />
+                        </>
+                      )}
                     </button>
 
                     <button

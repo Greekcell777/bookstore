@@ -29,7 +29,7 @@ class Order(db.Model, SerializerMixin):
     shipping_amount = Column(Numeric(10, 2), nullable=False, default=0)
     discount_amount = Column(Numeric(10, 2), nullable=False, default=0)
     total_amount = Column(Numeric(10, 2), nullable=False, default=0)
-    currency = Column(String(3), nullable=False, default='KES')
+    currency = Column(String(3), nullable=False, default='USD')
     
     # Payment Information
     payment_method = Column(Enum(*PAYMENT_METHODS, name='payment_methods'))
@@ -200,8 +200,8 @@ class Payment(db.Model, SerializerMixin):
     
     # Payment Details
     amount = Column(Numeric(10, 2), nullable=False)
-    currency = Column(String(3), nullable=False, default='KES')  # Kenyan Shilling
-    method = Column(String(20), default='mpesa_stk_push', nullable=False)  # Method is now M-Pesa
+    currency = Column(String(3), nullable=False, default='USD')  # Kenyan Shilling
+    method = Column(String(20), default='mpesa', nullable=False)  # Method is now M-Pesa
     status = Column(Enum(*PAYMENT_STATUS, name='payment_status'), default='pending', nullable=False)
     
     # M-Pesa Specific Fields

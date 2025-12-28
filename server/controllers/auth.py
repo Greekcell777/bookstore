@@ -1,4 +1,4 @@
-from flask_jwt_extended import create_access_token, get_jwt_identity, set_access_cookies, unset_access_cookies, jwt_required
+from flask_jwt_extended import create_access_token, set_refresh_cookies, get_jwt_identity, set_access_cookies, unset_access_cookies, jwt_required
 from flask import request, make_response, jsonify
 import re
 from flask_restful import Resource
@@ -32,7 +32,7 @@ class Login(Resource):
                 'error': 'Incorrect email or password'
             }),401)
         
-        token = create_access_token(identity=user.id)
+        token = create_access_token(identity=user.id, expires_delta=False)
         
         response = jsonify({
             'msg': 'Login successful',
@@ -48,14 +48,14 @@ class Login(Resource):
     def get(self):
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
-        return make_response(user, 200)
+        return make_response(user.to_dict(), 200)
         
 
 class Logout(Resource):
     @jwt_required()
     def post(self):
         response = jsonify({'msg': 'Successfully logged out'})
-        unset_access_cookies()
+        unset_access_cookies(response=response)
         return make_response(response, 204)
     
 class Register(Resource):

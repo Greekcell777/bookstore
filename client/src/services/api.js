@@ -1,5 +1,14 @@
 const API_URL = 'http://localhost:5555';
 
+
+function getCSRFToken() {
+    const name = 'csrf_access_token';
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
 // Helper function for API calls with Fetch
 const apiRequest = async (endpoint, method = 'GET', data = null, requireAuth = true) => {
   const config = {
@@ -7,15 +16,13 @@ const apiRequest = async (endpoint, method = 'GET', data = null, requireAuth = t
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials : "include"
   };
 
   // Add auth token if required and available
   if (requireAuth) {
-    const token = localStorage.getItem('token');
-    if (token) {
       config.credentials = "include"
-    }
+      config.headers["X-CSRF-TOKEN"] = getCSRFToken() 
+    
   }
 
   // Add request body if provided
@@ -164,6 +171,7 @@ export const cartAPI = {
 export const ordersAPI = {
   // Create order
   createOrder: async (orderData) => {
+    console.log(orderData)
     return await apiRequest('/api/orders', 'POST', orderData, true);
   },
 

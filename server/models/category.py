@@ -17,7 +17,7 @@ class Category(db.Model, SerializerMixin):
     
     created_at = Column(DateTime, server_default=func.now())
     
-    books = relationship('Book', back_populates='categories')
+    books = relationship('Book', secondary='book_categories', back_populates='categories')
     
     serialize_rules =  ('-books.categories',)
     

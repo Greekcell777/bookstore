@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, ShoppingCart, User, Menu, X, LogOut, Package, Heart, Settings, Bell, BookOpen } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
+import { useBookStore } from '../components/BookstoreContext';
 
 const MinimalNavbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -10,7 +10,15 @@ const MinimalNavbar = () => {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   
-  const { user, logout, isAuthenticated } = useAuth();
+  // Use SimpleBookStore context instead of AuthContext
+  const { 
+    user, 
+    logout, 
+    cart, 
+    wishlist,
+    cartItemCount,
+    wishlistCount 
+  } = useBookStore();
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -47,17 +55,52 @@ const MinimalNavbar = () => {
   // Get user initials for avatar
   const getUserInitials = () => {
     if (!user) return 'U';
-    const { firstName, secondName, email } = user;
-    if (firstName && secondName) {
-      return `${firstName.charAt(0)}${secondName.charAt(0)}`.toUpperCase();
+    
+    // Handle different user object structures
+    if (user.firstName && user.lastName) {
+      return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
     }
-    if (firstName) {
-      return firstName.charAt(0).toUpperCase();
+    
+    if (user.firstName && user.secondName) {
+      return `${user.firstName.charAt(0)}${user.secondName.charAt(0)}`.toUpperCase();
     }
-    if (email) {
-      return email.charAt(0).toUpperCase();
+    
+    if (user.firstName) {
+      return user.firstName.charAt(0).toUpperCase();
     }
+    
+    if (user.name) {
+      const names = user.name.split(' ');
+      if (names.length >= 2) {
+        return `${names[0].charAt(0)}${names[1].charAt(0)}`.toUpperCase();
+      }
+      return names[0].charAt(0).toUpperCase();
+    }
+    
+    if (user.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    
     return 'U';
+  };
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (!user) return '';
+    
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    
+    if (user.firstName && user.secondName) {
+      return `${user.firstName} ${user.secondName}`;
+    }
+    
+    if (user.name) {
+      return user.name;
+    }
+    
+    return user.email || 'User';
   };
 
   return (
@@ -104,7 +147,7 @@ const MinimalNavbar = () => {
             >
               Bestsellers
             </Link>
-            {isAuthenticated && user?.is_admin && (
+            {user?.is_admin && (
               <Link 
                 to="/admin" 
                 className="text-gray-700 hover:text-red-600 transition-colors font-medium flex items-center"
@@ -137,18 +180,31 @@ const MinimalNavbar = () => {
             >
               <Search size={20} />
             </button>
-
+            
             {/* Cart */}
             <Link to="/cart" className="relative p-2 hover:bg-gray-100 rounded-md transition-colors">
               <ShoppingCart size={20} />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                0
-              </span>
+              {cartItemCount > 0 && (
+                
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {cartItemCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Wishlist */}
+            <Link to="/wishlist" className="relative p-2 hover:bg-gray-100 rounded-md transition-colors">
+              <Heart size={20} />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {wishlistCount}
+                </span>
+              )}
             </Link>
 
             {/* User Dropdown */}
             <div className="relative" ref={dropdownRef}>
-              {isAuthenticated ? (
+              {user ? (
                 // Logged In User
                 <button 
                   className="flex items-center space-x-2 p-1.5 hover:bg-gray-100 rounded-full transition-colors"
@@ -172,7 +228,7 @@ const MinimalNavbar = () => {
               
               {isUserDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border py-2 z-50">
-                  {isAuthenticated ? (
+                  {user ? (
                     // Logged In Dropdown
                     <>
                       <div className="px-4 py-3 border-b">
@@ -182,10 +238,10 @@ const MinimalNavbar = () => {
                           </div>
                           <div>
                             <p className="font-medium text-sm">
-                              {user?.firstName} {user?.lastName}
+                              {getUserDisplayName()}
                             </p>
                             <p className="text-xs text-gray-500 truncate max-w-[160px]">
-                              {user?.email}
+                              {user.email || ''}
                             </p>
                           </div>
                         </div>
@@ -216,6 +272,11 @@ const MinimalNavbar = () => {
                       >
                         <Heart size={16} className="mr-3 text-gray-500" />
                         Wishlist
+                        {wishlistCount > 0 && (
+                          <span className="ml-auto bg-red-100 text-red-800 text-xs rounded-full px-2 py-0.5">
+                            {wishlistCount}
+                          </span>
+                        )}
                       </Link>
                       
                       {user?.is_admin && (
@@ -329,7 +390,7 @@ const MinimalNavbar = () => {
                 Bestsellers
               </Link>
               
-              {isAuthenticated ? (
+              {user ? (
                 <>
                   <div className="px-4 py-3 border-t mt-2">
                     <p className="text-sm font-medium text-gray-500">My Account</p>
@@ -356,7 +417,15 @@ const MinimalNavbar = () => {
                     className="px-4 py-3 hover:bg-gray-50 rounded-md transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Wishlist
+                    Wishlist {wishlistCount > 0 && `(${wishlistCount})`}
+                  </Link>
+                  
+                  <Link 
+                    to="/cart" 
+                    className="px-4 py-3 hover:bg-gray-50 rounded-md transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Cart {cartItemCount > 0 && `(${cartItemCount})`}
                   </Link>
                   
                   {user?.is_admin && (
