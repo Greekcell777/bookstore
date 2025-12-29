@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5555';
+const API_URL = 'https://bookstore-a3u8.onrender.com';
 
 
 function getCSRFToken() {
