@@ -137,7 +137,7 @@ const Login = () => {
               <BookOpen size={28} className="text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-            <p className="text-gray-600">Sign in to your BookNook account</p>
+            <p className="text-gray-600">Sign in to your BookTopia account</p>
             
             {/* Pending actions notice */}
             {localStorage.getItem('pendingActions') && (

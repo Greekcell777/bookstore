@@ -40,7 +40,7 @@ class Login(Resource):
         })
 
         set_access_cookies(response, token)
-
+        
         return make_response(response, 200)  
 
 
@@ -48,6 +48,7 @@ class Login(Resource):
     def get(self):
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
+        
         return make_response(user.to_dict(), 200)
         
 
@@ -55,7 +56,7 @@ class Logout(Resource):
     @jwt_required()
     def post(self):
         response = jsonify({'msg': 'Successfully logged out'})
-        unset_access_cookies(response=response)
+        unset_access_cookies()
         return make_response(response, 204)
     
 class Register(Resource):

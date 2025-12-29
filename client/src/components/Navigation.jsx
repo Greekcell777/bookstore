@@ -122,7 +122,7 @@ const MinimalNavbar = () => {
                 <BookOpen size={18} className="text-white" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                BookNook
+                BookTopia
               </span>
             </Link>
           </div>

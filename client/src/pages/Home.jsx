@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { 
   ArrowRight, 
   Star, 
-  TrendingUp, 
   Shield, 
   Truck, 
   Clock,
@@ -13,10 +12,21 @@ import {
   Users,
   Award
 } from 'lucide-react';
+import { useBookStore } from '../components/BookstoreContext';
 
 const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
+  
+  // Get data and functions from context
+  const {
+    featuredBooks,
+    categories,
+    addToCart,
+    addToWishlist,
+    isLoading,
+    error
+  } = useBookStore();
 
   // Hero carousel images
   const heroSlides = [
@@ -49,56 +59,6 @@ const Home = () => {
     }
   ];
 
-  // Featured books
-  const featuredBooks = [
-    {
-      id: 1,
-      title: "The Midnight Library",
-      author: "Matt Haig",
-      price: 24.99,
-      rating: 4.5,
-      image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&h=400&fit=crop",
-      category: "Fiction"
-    },
-    {
-      id: 2,
-      title: "Atomic Habits",
-      author: "James Clear",
-      price: 27.99,
-      rating: 4.8,
-      image: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=300&h=400&fit=crop",
-      category: "Self-Help"
-    },
-    {
-      id: 3,
-      title: "Project Hail Mary",
-      author: "Andy Weir",
-      price: 29.99,
-      rating: 4.7,
-      image: "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=300&h=400&fit=crop",
-      category: "Sci-Fi"
-    },
-    {
-      id: 4,
-      title: "Klara and the Sun",
-      author: "Kazuo Ishiguro",
-      price: 26.99,
-      rating: 4.3,
-      image: "https://images.unsplash.com/photo-1531346688376-ab6275c4725e?w=300&h=400&fit=crop",
-      category: "Literary Fiction"
-    }
-  ];
-
-  // Categories
-  const categories = [
-    { name: "Fiction", count: 2450, color: "bg-blue-100 text-blue-800" },
-    { name: "Non-Fiction", count: 1890, color: "bg-purple-100 text-purple-800" },
-    { name: "Sci-Fi", count: 1200, color: "bg-amber-100 text-amber-800" },
-    { name: "Mystery", count: 980, color: "bg-emerald-100 text-emerald-800" },
-    { name: "Biography", count: 850, color: "bg-pink-100 text-pink-800" },
-    { name: "Self-Help", count: 1100, color: "bg-indigo-100 text-indigo-800" },
-  ];
-
   // Features
   const features = [
     {
@@ -123,12 +83,28 @@ const Home = () => {
     }
   ];
 
-  // Stats
+  // Stats - using context data where available
   const stats = [
-    { value: "50K+", label: "Books Available", icon: <BookOpen /> },
-    { value: "150+", label: "Categories", icon: <BookOpen /> },
-    { value: "1M+", label: "Happy Readers", icon: <Users /> },
-    { value: "4.8", label: "Average Rating", icon: <Star /> }
+    { 
+      value: "50K+", 
+      label: "Books Available", 
+      icon: <BookOpen />,
+    },
+    { 
+      value: categories?.length ? `${categories.length}+` : "150+", 
+      label: "Categories", 
+      icon: <BookOpen />,
+    },
+    { 
+      value: "1M+", 
+      label: "Happy Readers", 
+      icon: <Users /> 
+    },
+    { 
+      value: "4.8", 
+      label: "Average Rating", 
+      icon: <Star /> 
+    }
   ];
 
   // Carousel auto-rotate
@@ -139,14 +115,72 @@ const Home = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Animation on scroll
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
+  // Handle add to cart
+  const handleAddToCart = async (bookId, event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      setLocalLoading(true);
+      await addToCart(bookId, 1);
+      // Optional: Show success toast
+    } catch (err) {
+      console.error('Failed to add to cart:', err);
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  // Handle add to wishlist
+  const handleAddToWishlist = async (bookId, event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      setLocalLoading(true);
+      await addToWishlist(bookId);
+      // Optional: Show success toast
+    } catch (err) {
+      console.error('Failed to add to wishlist:', err);
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  // Color mapping for categories
+  const getCategoryColor = (categoryName) => {
+    const colorMap = {
+      'Fiction': 'bg-blue-100 text-blue-800',
+      'Non-Fiction': 'bg-purple-100 text-purple-800',
+      'Sci-Fi': 'bg-amber-100 text-amber-800',
+      'Mystery': 'bg-emerald-100 text-emerald-800',
+      'Biography': 'bg-pink-100 text-pink-800',
+      'Self-Help': 'bg-indigo-100 text-indigo-800',
+    };
+    return colorMap[categoryName] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Access the data directly from context state
+  const featuredBooksData = Array.isArray(featuredBooks) ? featuredBooks : featuredBooks?.books || [];
+  const categoriesData = Array.isArray(categories) ? categories : categories?.categories || [];
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section with Carousel - FIXED */}
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-8">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hero Section with Carousel */}
       <section className="relative overflow-hidden bg-gray-100">
         {/* Carousel */}
         <div className="relative h-[400px] md:h-[500px] lg:h-[600px]">
@@ -268,54 +302,85 @@ const Home = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featuredBooks.map((book) => (
-              <div
-                key={book.id}
-                className="group bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-500 hover:-translate-y-2"
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={book.image}
-                    alt={book.title}
-                    className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                  <div className="absolute top-4 right-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${book.category === 'Fiction' ? 'bg-blue-100 text-blue-800' : 
-                      book.category === 'Self-Help' ? 'bg-green-100 text-green-800' : 
-                      'bg-amber-100 text-amber-800'}`}>
-                      {book.category}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-4 h-4 ${
-                            i < Math.floor(book.rating)
-                              ? 'fill-yellow-400 text-yellow-400'
-                              : 'fill-gray-300 text-gray-300'
-                          }`}
-                        />
-                      ))}
-                      <span className="ml-2 text-white text-sm">{book.rating}</span>
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading featured books...</p>
+            </div>
+          ) : featuredBooksData.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No featured books available at the moment.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {featuredBooksData.slice(0, 4).map((book) => (
+                <Link
+                  key={book.id}
+                  to={`/book/${book.id}`}
+                  className="group bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-500 hover:-translate-y-2 block"
+                >
+                  <div className="relative overflow-hidden">
+                    <img
+                      src={book.image || book.cover_image || "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&h=400&fit=crop"}
+                      alt={book.title}
+                      className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                      onError={(e) => {
+                        e.target.src = "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&h=400&fit=crop";
+                      }}
+                    />
+                    {book.categories && book.categories.length > 0 && (
+                      <div className="absolute top-4 right-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getCategoryColor(book.categories[0]?.name || '')}`}>
+                          {book.categories[0]?.name || 'Category'}
+                        </span>
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${
+                              i < Math.floor(book.rating || 0)
+                                ? 'fill-yellow-400 text-yellow-400'
+                                : 'fill-gray-300 text-gray-300'
+                            }`}
+                          />
+                        ))}
+                        <span className="ml-2 text-white text-sm">{book.rating || '4.0'}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="p-6">
-                  <h3 className="font-semibold text-lg mb-1 line-clamp-1">{book.title}</h3>
-                  <p className="text-gray-600 text-sm mb-4">{book.author}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-2xl font-bold text-gray-800">${book.price}</span>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 group-hover:scale-105">
-                      Add to Cart
-                    </button>
+                  <div className="p-6">
+                    <h3 className="font-semibold text-lg mb-1 line-clamp-1">{book.title}</h3>
+                    <p className="text-gray-600 text-sm mb-4">{book.author}</p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-2xl font-bold text-gray-800">
+                        ${book.sale_price || book.list_price || book.price || 19.99}
+                      </span>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={(e) => handleAddToWishlist(book.id, e)}
+                          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                          title="Add to wishlist"
+                          disabled={localLoading}
+                        >
+                          <Star className="w-5 h-5 text-gray-400 hover:text-yellow-400" />
+                        </button>
+                        <button 
+                          onClick={(e) => handleAddToCart(book.id, e)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 group-hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={localLoading}
+                        >
+                          {localLoading ? 'Adding...' : 'Add to Cart'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -356,33 +421,43 @@ const Home = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((category) => (
-              <Link
-                key={category.name}
-                to={`/category/${category.name.toLowerCase()}`}
-                className="block group"
-              >
-                <div className="p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-                  <div className={`w-12 h-12 rounded-lg ${category.color} flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                    <BookOpen className="w-6 h-6" />
-                  </div>
-                  <h3 className="font-semibold text-center mb-1">{category.name}</h3>
-                  <p className="text-gray-500 text-sm text-center">{category.count} books</p>
-                </div>
-              </Link>
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading categories...</p>
+            </div>
+          ) : categoriesData.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No categories available at the moment.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {categoriesData.slice(0, 6).map((category) => (
+                  
+                    <div className="p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
+                      <div className={`w-12 h-12 rounded-lg ${getCategoryColor(category.name)} flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                        <BookOpen className="w-6 h-6" />
+                      </div>
+                      <h3 className="font-semibold text-center mb-1">{category.name}</h3>
+                      {category.book_count && (
+                        <p className="text-gray-500 text-sm text-center">{category.book_count} books</p>
+                      )}
+                    </div>
+                ))}
+              </div>
 
-          <div className="text-center mt-12">
-            <Link
-              to="/categories"
-              className="inline-flex items-center px-8 py-3 border-2 border-blue-600 text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-all duration-300 group"
-            >
-              Explore All Categories
-              <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
+              <div className="text-center mt-12">
+                <Link
+                  to="/categories"
+                  className="inline-flex items-center px-8 py-3 border-2 border-blue-600 text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-all duration-300 group"
+                >
+                  Explore All Categories
+                  <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

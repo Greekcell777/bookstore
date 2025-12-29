@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Mail,
@@ -11,34 +11,54 @@ import {
   Check,
   ChevronLeft,
   BookOpen,
-  Loader2
+  Loader2,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
-import { useAuth } from './AuthContext';
+import { useBookStore } from '../components/BookstoreContext';
 
 const Register = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // Use BookStore context
+  const {
+    user,
+    isLoading: contextLoading,
+    error: contextError,
+    login: contextLogin,
+
+    getCurrentUser
+  } = useBookStore();
+
   const [formData, setFormData] = useState({
     firstName: '',
-    secondName: '',
+    lastName: '',
     email: '',
     phone: '',
-    password: 'Fr@nk2024',
-    confirmPassword: 'Fr@nk2024',
+    password: '',
+    confirmPassword: '',
     acceptTerms: false,
     newsletter: true
   });
+
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/profile');
+    }
+  }, [user, navigate]);
 
   // Password strength checker
   const [passwordStrength, setPasswordStrength] = useState({
     score: 0,
     message: ''
   });
-  
-  const {register} = useAuth()
+
   // Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -50,6 +70,11 @@ const Register = () => {
     // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+
+    // Clear general errors
+    if (errors.general) {
+      setErrors(prev => ({ ...prev, general: '' }));
     }
 
     // Check password strength
@@ -117,20 +142,23 @@ const Register = () => {
     }
   };
 
-  // Handle form submission with backend integration
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     setErrors({});
+    setSuccessMessage('');
 
     // Validation
     const newErrors = {};
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
+    
     if (!formData.email) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Please enter a valid email address';
     
     if (!formData.password) newErrors.password = 'Password is required';
-    else if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
     
     if (!formData.confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
     else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
@@ -139,71 +167,90 @@ const Register = () => {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setIsLoading(false);
+      setIsSubmitting(false);
       return;
     }
 
     try {
-      // Prepare data for backend
+      // Prepare registration data
       const userData = {
         firstName: formData.firstName.trim(),
-        secondName: formData.secondName.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim() || null,
-        password: formData.password,
-        username: formData.email.trim().split('@')[0] // Generate username from email
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim() || undefined,
+        password: formData.password
       };
 
-      // Call backend API
-      const response = await register(userData);
+      // Make API call for registration
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle specific error cases
+        if (data.error && data.error.includes('already exists')) {
+          throw new Error('This email is already registered. Please use a different email or login.');
+        } else if (data.error && data.error.includes('email')) {
+          throw new Error('Please enter a valid email address.');
+        } else if (data.error && data.error.includes('password')) {
+          throw new Error('Password does not meet requirements. Please use a stronger password.');
+        } else {
+          throw new Error(data.error || 'Registration failed. Please try again.');
+        }
+      }
+
+      // Registration successful - now login
+      const loginData = {
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password
+      };
+
+      // Use context login function
+      await contextLogin(loginData);
       
-      if (response.user && response.token) {
-        // Store token and user data
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('booknook_user', JSON.stringify(response.user));
-        
-        // Show success message
-        alert('Registration successful! You are now logged in.');
-        
-        // Redirect to dashboard or home page
+      // Show success message
+      setSuccessMessage('Registration successful! Welcome to BookNook.');
+      
+      // Auto-redirect after 2 seconds
+      setTimeout(() => {
         navigate('/profile');
-      } else {
-        throw new Error(response.error || 'Registration failed');
-      }
-      
+      }, 2000);
+
     } catch (error) {
-      // Handle specific error cases
-      let errorMessage = 'Registration failed. Please try again.';
-      
-      if (error.message.includes('Email already registered')) {
-        setErrors({ email: 'This email is already registered. Please use a different email or login.' });
-      } else if (error.message.includes('Invalid email format')) {
-        setErrors({ email: 'Please enter a valid email address.' });
-      } else if (error.message.includes('password')) {
-        setErrors({ password: 'Password requirements not met. Please use a stronger password.' });
-      } else {
-        setErrors({ general: error.message });
-      }
+      console.error('Registration error:', error);
+      setErrors({ general: error.message });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  // Handle API response errors
-  const handleApiError = (error) => {
-    console.error('Registration error:', error);
-    
-    // Map backend error messages to form errors
-    if (error.includes('already exists') || error.includes('already registered')) {
-      return { email: 'This email is already registered. Please use a different email or login.' };
-    } else if (error.includes('Invalid email')) {
-      return { email: 'Please enter a valid email address.' };
-    } else if (error.includes('password')) {
-      return { password: 'Password requirements not met. Please use a stronger password.' };
-    } else {
-      return { general: error };
-    }
+  // Quick registration test button (for development)
+  const handleQuickRegister = () => {
+    setFormData({
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      phone: '+254712345678',
+      password: 'Password123!',
+      confirmPassword: 'Password123!',
+      acceptTerms: true,
+      newsletter: true
+    });
+    checkPasswordStrength('Password123!');
   };
+
+  // Display context error if any
+  useEffect(() => {
+    if (contextError) {
+      setErrors(prev => ({ ...prev, general: contextError }));
+    }
+  }, [contextError]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
@@ -221,18 +268,26 @@ const Register = () => {
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {/* Header */}
           <div className="p-8 text-center border-b border-gray-200">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-blue-600 to-purple-600 rounded-full mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full mb-6">
               <BookOpen size={28} className="text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Join BookNook</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Join BookTopia</h1>
             <p className="text-gray-600">Create your account and start your reading journey</p>
           </div>
 
           {/* Error Message */}
           {errors.general && (
             <div className="mx-8 mt-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
-              <AlertCircle className="text-red-500 mr-3 mt-0.5" size={20} />
+              <XCircle className="text-red-500 mr-3 mt-0.5" size={20} />
               <span className="text-red-700 text-sm">{errors.general}</span>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mx-8 mt-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start">
+              <CheckCircle className="text-green-500 mr-3 mt-0.5" size={20} />
+              <span className="text-green-700 text-sm">{successMessage}</span>
             </div>
           )}
 
@@ -253,7 +308,7 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-4 py-3 border ${errors.firstName ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="John"
-                    disabled={isLoading}
+                    disabled={isSubmitting || contextLoading}
                   />
                 </div>
                 {errors.firstName && (
@@ -267,20 +322,26 @@ const Register = () => {
               {/* Last Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name
+                  Last Name *
                 </label>
                 <div className="relative">
                   <UserIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                   <input
                     type="text"
-                    name="secondName"
-                    value={formData.secondName}
+                    name="lastName"
+                    value={formData.lastName}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full pl-10 pr-4 py-3 border ${errors.lastName ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="Doe"
-                    disabled={isLoading}
+                    disabled={isSubmitting || contextLoading}
                   />
                 </div>
+                {errors.lastName && (
+                  <p className="mt-2 text-sm text-red-600 flex items-center">
+                    <AlertCircle size={14} className="mr-1" />
+                    {errors.lastName}
+                  </p>
+                )}
               </div>
 
               {/* Email */}
@@ -297,7 +358,7 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-4 py-3 border ${errors.email ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="you@example.com"
-                    disabled={isLoading}
+                    disabled={isSubmitting || contextLoading}
                   />
                 </div>
                 {errors.email && (
@@ -322,7 +383,7 @@ const Register = () => {
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="+254712345678"
-                    disabled={isLoading}
+                    disabled={isSubmitting || contextLoading}
                   />
                 </div>
               </div>
@@ -341,13 +402,13 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-12 py-3 border ${errors.password ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="Create a password"
-                    disabled={isLoading}
+                    disabled={isSubmitting || contextLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    disabled={isLoading}
+                    disabled={isSubmitting || contextLoading}
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -375,7 +436,7 @@ const Register = () => {
                       />
                     </div>
                     <div className="mt-2 text-xs text-gray-500">
-                      Password must contain at least 8 characters including uppercase, lowercase, number, and special character
+                      Password must contain at least 6 characters including uppercase, lowercase, number, and special character
                     </div>
                   </div>
                 )}
@@ -402,13 +463,13 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-12 py-3 border ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="Confirm your password"
-                    disabled={isLoading}
+                    disabled={isSubmitting || contextLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    disabled={isLoading}
+                    disabled={isSubmitting || contextLoading}
                   >
                     {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -430,9 +491,9 @@ const Register = () => {
                     name="acceptTerms"
                     checked={formData.acceptTerms}
                     onChange={handleChange}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
+                    className={`w-4 h-4 mt-1 border rounded ${errors.acceptTerms ? 'border-red-300 text-red-600' : 'border-gray-300 text-blue-600'} focus:ring-blue-500`}
                     id="acceptTerms"
-                    disabled={isLoading}
+                    disabled={isSubmitting || contextLoading}
                   />
                   <label htmlFor="acceptTerms" className="ml-3 text-sm text-gray-700">
                     I agree to the{' '}
@@ -459,9 +520,9 @@ const Register = () => {
                     name="newsletter"
                     checked={formData.newsletter}
                     onChange={handleChange}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
+                    className="w-4 h-4 mt-1 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     id="newsletter"
-                    disabled={isLoading}
+                    disabled={isSubmitting || contextLoading}
                   />
                   <label htmlFor="newsletter" className="ml-3 text-sm text-gray-700">
                     Send me reading recommendations, updates, and exclusive offers via email
@@ -489,6 +550,10 @@ const Register = () => {
                     <Check size={16} className="mr-2 text-green-500" />
                     Access exclusive member discounts
                   </li>
+                  <li className="flex items-center">
+                    <Check size={16} className="mr-2 text-green-500" />
+                    Fast checkout and order tracking
+                  </li>
                 </ul>
               </div>
 
@@ -496,10 +561,10 @@ const Register = () => {
               <div className="md:col-span-2">
                 <button
                   type="submit"
-                  disabled={isLoading}
-                  className="w-full py-4 bg-linear-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  disabled={isSubmitting || contextLoading}
+                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  {isLoading ? (
+                  {isSubmitting || contextLoading ? (
                     <>
                       <Loader2 size={20} className="animate-spin mr-2" />
                       Creating account...
@@ -509,6 +574,19 @@ const Register = () => {
                   )}
                 </button>
               </div>
+
+              {/* Development Quick Register Button */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="md:col-span-2">
+                  <button
+                    type="button"
+                    onClick={handleQuickRegister}
+                    className="w-full py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    Fill with test data (Dev only)
+                  </button>
+                </div>
+              )}
             </div>
           </form>
 
@@ -516,7 +594,15 @@ const Register = () => {
           <div className="border-t border-gray-200 p-8 text-center">
             <p className="text-gray-600">
               Already have an account?{' '}
-              <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-700">
+              <Link 
+                to="/login" 
+                className="font-semibold text-blue-600 hover:text-blue-700"
+                onClick={(e) => {
+                  if (isSubmitting || contextLoading) {
+                    e.preventDefault();
+                  }
+                }}
+              >
                 Sign in here
               </Link>
             </p>

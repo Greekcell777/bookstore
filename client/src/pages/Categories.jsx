@@ -237,11 +237,7 @@ const Categories = () => {
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {sortedCategories.map((category) => (
-              <Link
-                key={category.id}
-                to={`/catalog?category=${encodeURIComponent(category.name)}`}
-                className="group block"
-              >
+              
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
                   {/* Image Container */}
                   <div className="relative h-48 overflow-hidden">
@@ -290,18 +286,13 @@ const Categories = () => {
                     </div>
                   </div>
                 </div>
-              </Link>
             ))}
           </div>
         ) : (
           // List View
           <div className="space-y-4">
             {sortedCategories.map((category) => (
-              <Link
-                key={category.id}
-                to={`/catalog?category=${encodeURIComponent(category.name)}`}
-                className="block"
-              >
+              
                 <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all duration-300 group hover:bg-blue-50/30">
                   <div className="flex items-start">
                     {/* Image */}
@@ -355,7 +346,6 @@ const Categories = () => {
                     </div>
                   </div>
                 </div>
-              </Link>
             ))}
           </div>
         )}
