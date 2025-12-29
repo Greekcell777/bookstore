@@ -17,7 +17,7 @@ import os
 load_dotenv()
 
 app = Flask(__name__, 
-            static_folder='../client/build',  # Path to React build folder
+            static_folder='../client/dist',  # Path to React build folder
             static_url_path='')
 
 # ... (keep your existing CORS, bcrypt, JWT, etc. setup)
