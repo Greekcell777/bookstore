@@ -92,7 +92,7 @@ const OrdersPage = () => {
       notes: orderData.notes
     };
   };
-
+  console.log(orders)
   // Process all orders
   const processedOrders = orders.map(processOrderData).filter(Boolean);
 
@@ -341,12 +341,15 @@ const OrdersPage = () => {
 
                   {/* Order Items Preview */}
                   <div className="flex items-center gap-4 mb-4 flex-wrap">
+                    
                     {order.itemsDetails.slice(0, 3).map((item, index) => (
+                      
                       <Link
                         key={index}
                         to={`/book/${item.bookId || item.id}`}
                         className="flex items-center gap-3 hover:bg-gray-100 p-2 rounded-lg transition"
                       >
+                        {console.log(item)}
                         <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                           <img 
                             src={item.image} 

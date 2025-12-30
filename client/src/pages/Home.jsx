@@ -435,7 +435,7 @@ const Home = () => {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {categoriesData.slice(0, 6).map((category) => (
                   
-                    <div className="p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
+                    <div key={category.id} className="p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
                       <div className={`w-12 h-12 rounded-lg ${getCategoryColor(category.name)} flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`}>
                         <BookOpen className="w-6 h-6" />
                       </div>

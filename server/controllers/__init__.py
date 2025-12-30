@@ -4,7 +4,7 @@ from server.controllers.books import (
     BookListResource, BookResource, FeaturedBooksResource,
     BestsellerBooksResource, CategoryListResource, SearchBooksResource
 )# Import controllers
-from server.controllers.cart import CartResource, CartItemResource
+from server.controllers.cart import CartResource, CartItemResource, CartByID
 from server.controllers.orders import OrderListResource, OrderResource
 from server.controllers.reviews import BookReviewsResource, ReviewResource, ReviewHelpfulResource
 from server.controllers.admin import (
@@ -28,7 +28,8 @@ def addResource(api):
     api.add_resource(CategoryListResource, '/api/categories')
     api.add_resource(SearchBooksResource, '/api/books/search')
     api.add_resource(CartResource, '/api/cart')
-    api.add_resource(CartItemResource, '/api/cart/items', '/api/cart/items/<int:item_id>')
+    api.add_resource(CartItemResource, '/api/cart/items')
+    api.add_resource(CartByID, '/api/cart/items/<int:item_id>')
     api.add_resource(OrderListResource, '/api/orders')
     api.add_resource(OrderResource, '/api/orders/<int:order_id>')
     api.add_resource(BookReviewsResource, '/api/books/<int:book_id>/reviews')

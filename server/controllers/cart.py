@@ -62,7 +62,8 @@ class CartResource(Resource):
         """Clear entire cart"""
         user_id = get_jwt_identity()
         
-        cart = Cart.query.filter_by(user_id=user_id, is_active=True).first()
+        cart = Cart.query.filter_by(user_id=user_id).first()
+        print(cart)
         if not cart:
             return {'message': 'Cart not found'}, 404
         
@@ -98,7 +99,6 @@ class CartItemResource(Resource):
         
         # Validate book exists and is available
         book = Book.query.get(book_id)
-        print(book)
         if not book:
             return {'error': 'Book not found'}, 404
         
@@ -192,7 +192,8 @@ class CartItemResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {'error': f'Failed to update cart item: {str(e)}'}, 500
-    
+
+class CartByID(Resource):
     @jwt_required()
     def delete(self, item_id):
         """Remove item from cart"""
@@ -202,7 +203,7 @@ class CartItemResource(Resource):
         cart_item = CartItem.query.get(item_id)
         if not cart_item:
             return {'error': 'Cart item not found'}, 404
-        
+        print('removing from cart')
         # Verify cart belongs to user
         cart = Cart.query.get(cart_item.cart_id)
         if cart.user_id != user_id:

@@ -56,13 +56,13 @@ class Logout(Resource):
     @jwt_required()
     def post(self):
         response = jsonify({'msg': 'Successfully logged out'})
-        unset_access_cookies()
-        return make_response(response, 204)
+        unset_access_cookies(response)
+        return make_response({}, 204)
     
 class Register(Resource):
     def post(self):
         data = request.get_json()
-        
+        print(data)
         # Validation
         required_fields = ['firstName', 'secondName', 'email', 'password']
         for field in required_fields:
@@ -108,13 +108,15 @@ class Register(Resource):
             
             # Create token for auto-login after registration
             token = create_access_token(identity=user.id)
-            response = {
+            response = make_response({
                 'message': 'Registration successful',
                 'user': user.to_dict(),
                 'token': token
-            }
+            }, 201)
+
             set_access_cookies(response, token)
-            return make_response(jsonify(response), 201)
+
+            return response
             
         except Exception as e:
             db.session.rollback()

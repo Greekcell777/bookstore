@@ -84,6 +84,29 @@ export const BookStoreProvider = ({ children }) => {
     );
   };
 
+  const updateCart = async (itemId, quantity) => {
+    return handleApiCall(
+      () => {
+        if (quantity <= 0) {
+          // If quantity is 0 or negative, remove the item
+          return cartAPI.removeFromCart(itemId);
+        } else {
+          // Update quantity for existing item
+          return cartAPI.updateCartItem(itemId, { quantity });
+        }
+      },
+      async () => {
+        // Refresh cart after updating
+        const updatedCart = await cartAPI.getCart();
+        setCart(updatedCart.items || updatedCart || []);
+        
+        // You could add a toast notification here
+        console.log('Cart updated successfully');
+      },
+      'Failed to update cart'
+    );
+  };
+
   const addToCart = async (bookId, quantity = 1) => {
     return handleApiCall(
       () => cartAPI.addToCart(bookId, quantity),
@@ -176,6 +199,42 @@ export const BookStoreProvider = ({ children }) => {
         }
       },
       'Login failed'
+    );
+  };
+
+  const register = async (userData) => {
+    return handleApiCall(
+      () => authAPI.register(userData),
+      async (response) => {
+        if (response?.user) {
+          setUser(response.user);
+          console.log('Registration successful:', response.user);
+          
+          // Store user in localStorage as fallback
+          localStorage.setItem('user', JSON.stringify(response.user));
+          
+          // If registration includes auto-login, fetch user data
+          if (response.user) {
+            try {
+              const [cartRes, wishlistRes] = await Promise.allSettled([
+                cartAPI.getCart(),
+                wishlistAPI.getWishlist()
+              ]);
+              
+              if (cartRes.status === 'fulfilled') {
+                setCart(cartRes.value.items || cartRes.value || []);
+              }
+              
+              if (wishlistRes.status === 'fulfilled') {
+                setWishlist(wishlistRes.value.items || wishlistRes.value || []);
+              }
+            } catch (err) {
+              console.log('Error fetching user data after registration:', err);
+            }
+          }
+        }
+      },
+      'Registration failed'
     );
   };
 
@@ -383,6 +442,7 @@ export const BookStoreProvider = ({ children }) => {
     // Cart operations
     fetchCart,
     addToCart,
+    updateCart,
     removeFromCart,
     clearCart,
     
@@ -393,6 +453,7 @@ export const BookStoreProvider = ({ children }) => {
     
     // User operations
     login,
+    register,
     logout,
     getCurrentUser,
     

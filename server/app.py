@@ -31,19 +31,25 @@ bcrypt=Bcrypt(app=app)
 jwt = JWTManager(app=app)
 api = Api(app=app)
 
+addResource(api=api)
 
-# Serve React App for any non-API route
+# 2. Catch-all route for React - MUST BE LAST
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
-def serve_react_app(path):
-    if path and os.path.exists(os.path.join(app.static_folder, path)):
-        # Serve static files (JS, CSS, images)
+def serve(path):
+    # Don't interfere with API routes
+    if path.startswith('api/'):
+        from flask import abort
+        abort(404)
+    
+    # Check if it's a static file
+    file_path = os.path.join(app.static_folder, path)
+    if path and os.path.exists(file_path) and os.path.isfile(file_path):
         return send_from_directory(app.static_folder, path)
-    else:
-        # Serve index.html for all other routes (client-side routing)
-        return send_from_directory(app.static_folder, 'index.html')
+    
+    # Otherwise serve React's index.html
+    return send_from_directory(app.static_folder, 'index.html')
 
-addResource(api=api)
 
 db.init_app(app=app)
 

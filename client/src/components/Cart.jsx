@@ -35,8 +35,8 @@ const Cart = () => {
     error,
     user
   } = useBookStore();
+
   
-  console.log(cartTotal)
   
   const [suggestedItems, setSuggestedItems] = useState([
     {

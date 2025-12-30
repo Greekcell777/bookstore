@@ -74,7 +74,6 @@ class OrderListResource(Resource):
         if not data:
             return {'error': 'No data provided'}, 400
         
-        print("Order data received:", data)
         
         # Get shipping address from request
         shipping_address_data = data.get('shipping_address')
@@ -178,7 +177,6 @@ class OrderListResource(Resource):
                 last_name = shipping_address.get('last_name', '')
                 full_name = f"{first_name} {last_name}".strip()
 
-            print(shipping_address)
             shipping = Address(
                 user_id=user_id,
                 full_name=full_name,
@@ -300,14 +298,13 @@ class OrderListResource(Resource):
                     'payment_status': payment_status,
                     'transaction_id': transaction_id,
                     'shipping_address': {
-                        'full_name': order.shipping_full_name,
-                        'street': order.shipping_street,
-                        'city': order.shipping_city,
-                        'state': order.shipping_state,
-                        'postal_code': order.shipping_postal_code,
-                        'country': order.shipping_country,
-                        'phone': order.shipping_phone,
-                        'email': order.shipping_email
+                        'full_name': order.shipping_address.full_name,
+                        'city': order.shipping_address.town,
+                        'state': order.shipping_address.county,
+                        'postal_code': order.shipping_address.postal_code,
+                        'country': order.shipping_address.country,
+                        'phone': order.user.phone,
+                        'email': order.user.email
                     },
                     'items': [
                         {
@@ -317,13 +314,12 @@ class OrderListResource(Resource):
                             'unit_price': float(item.unit_price),
                             'book_title': item.book_title,
                             'book_author': item.book_author,
-                            'book_cover_url': item.book_cover_url,
-                            'book_format': item.book_format
+                            'book_cover_url': item.cover_image
                         } for item in order_items
                     ],
                     'financial_details': {
                         'subtotal': float(order.subtotal),
-                        'shipping_cost': float(order.shipping_cost),
+                        'shipping_cost': float(order.shipping_amount),
                         'tax_amount': float(order.tax_amount),
                         'total': float(order.total_amount)
                     }

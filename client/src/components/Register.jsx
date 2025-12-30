@@ -15,24 +15,22 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
-import { useBookStore } from '../components/BookstoreContext';
+import { useBookStore } from '../components/BookstoreContext'; // Fixed import path
 
 const Register = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
   
   // Use BookStore context
   const {
     user,
-    isLoading: contextLoading,
+    isLoading,
     error: contextError,
-    login: contextLogin,
-
-    getCurrentUser
+    register,
+    login
   } = useBookStore();
 
   const [formData, setFormData] = useState({
@@ -145,7 +143,6 @@ const Register = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setErrors({});
     setSuccessMessage('');
 
@@ -167,55 +164,24 @@ const Register = () => {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setIsSubmitting(false);
       return;
     }
 
     try {
-      // Prepare registration data
+      // Prepare registration data (note: context expects secondName, not lastName)
       const userData = {
         firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
+        secondName: formData.lastName.trim(), // Changed from lastName to secondName
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim() || undefined,
         password: formData.password
       };
 
-      // Make API call for registration
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Handle specific error cases
-        if (data.error && data.error.includes('already exists')) {
-          throw new Error('This email is already registered. Please use a different email or login.');
-        } else if (data.error && data.error.includes('email')) {
-          throw new Error('Please enter a valid email address.');
-        } else if (data.error && data.error.includes('password')) {
-          throw new Error('Password does not meet requirements. Please use a stronger password.');
-        } else {
-          throw new Error(data.error || 'Registration failed. Please try again.');
-        }
-      }
-
-      // Registration successful - now login
-      const loginData = {
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password
-      };
-
-      // Use context login function
-      await contextLogin(loginData);
-      
+      // Use context register function (handles auto-login)
+      await register(userData);
+  
       // Show success message
-      setSuccessMessage('Registration successful! Welcome to BookNook.');
+      setSuccessMessage('Registration successful! Welcome to BookNook. Redirecting...');
       
       // Auto-redirect after 2 seconds
       setTimeout(() => {
@@ -224,26 +190,12 @@ const Register = () => {
 
     } catch (error) {
       console.error('Registration error:', error);
-      setErrors({ general: error.message });
-    } finally {
-      setIsSubmitting(false);
+      // Use the error from context if available
+      const errorMessage = contextError || error.message || 'Registration failed. Please try again.';
+      setErrors({ general: errorMessage });
     }
   };
 
-  // Quick registration test button (for development)
-  const handleQuickRegister = () => {
-    setFormData({
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john.doe@example.com',
-      phone: '+254712345678',
-      password: 'Password123!',
-      confirmPassword: 'Password123!',
-      acceptTerms: true,
-      newsletter: true
-    });
-    checkPasswordStrength('Password123!');
-  };
 
   // Display context error if any
   useEffect(() => {
@@ -253,7 +205,7 @@ const Register = () => {
   }, [contextError]);
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         {/* Back to Home */}
         <Link
@@ -271,7 +223,7 @@ const Register = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full mb-6">
               <BookOpen size={28} className="text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Join BookTopia</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Join BookNook</h1>
             <p className="text-gray-600">Create your account and start your reading journey</p>
           </div>
 
@@ -308,7 +260,7 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-4 py-3 border ${errors.firstName ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="John"
-                    disabled={isSubmitting || contextLoading}
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.firstName && (
@@ -333,7 +285,7 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-4 py-3 border ${errors.lastName ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="Doe"
-                    disabled={isSubmitting || contextLoading}
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.lastName && (
@@ -358,7 +310,7 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-4 py-3 border ${errors.email ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="you@example.com"
-                    disabled={isSubmitting || contextLoading}
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.email && (
@@ -383,7 +335,7 @@ const Register = () => {
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="+254712345678"
-                    disabled={isSubmitting || contextLoading}
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -402,13 +354,13 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-12 py-3 border ${errors.password ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="Create a password"
-                    disabled={isSubmitting || contextLoading}
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    disabled={isSubmitting || contextLoading}
+                    disabled={isLoading}
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -463,13 +415,13 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-full pl-10 pr-12 py-3 border ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     placeholder="Confirm your password"
-                    disabled={isSubmitting || contextLoading}
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    disabled={isSubmitting || contextLoading}
+                    disabled={isLoading}
                   >
                     {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -493,7 +445,7 @@ const Register = () => {
                     onChange={handleChange}
                     className={`w-4 h-4 mt-1 border rounded ${errors.acceptTerms ? 'border-red-300 text-red-600' : 'border-gray-300 text-blue-600'} focus:ring-blue-500`}
                     id="acceptTerms"
-                    disabled={isSubmitting || contextLoading}
+                    disabled={isLoading}
                   />
                   <label htmlFor="acceptTerms" className="ml-3 text-sm text-gray-700">
                     I agree to the{' '}
@@ -522,7 +474,7 @@ const Register = () => {
                     onChange={handleChange}
                     className="w-4 h-4 mt-1 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     id="newsletter"
-                    disabled={isSubmitting || contextLoading}
+                    disabled={isLoading}
                   />
                   <label htmlFor="newsletter" className="ml-3 text-sm text-gray-700">
                     Send me reading recommendations, updates, and exclusive offers via email
@@ -561,10 +513,10 @@ const Register = () => {
               <div className="md:col-span-2">
                 <button
                   type="submit"
-                  disabled={isSubmitting || contextLoading}
+                  disabled={isLoading}
                   className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  {isSubmitting || contextLoading ? (
+                  {isLoading ? (
                     <>
                       <Loader2 size={20} className="animate-spin mr-2" />
                       Creating account...
@@ -574,19 +526,6 @@ const Register = () => {
                   )}
                 </button>
               </div>
-
-              {/* Development Quick Register Button */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="md:col-span-2">
-                  <button
-                    type="button"
-                    onClick={handleQuickRegister}
-                    className="w-full py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-                  >
-                    Fill with test data (Dev only)
-                  </button>
-                </div>
-              )}
             </div>
           </form>
 
@@ -598,7 +537,7 @@ const Register = () => {
                 to="/login" 
                 className="font-semibold text-blue-600 hover:text-blue-700"
                 onClick={(e) => {
-                  if (isSubmitting || contextLoading) {
+                  if (isLoading) {
                     e.preventDefault();
                   }
                 }}

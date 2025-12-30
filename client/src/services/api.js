@@ -1,4 +1,4 @@
-const API_URL = 'https://bookstore-a3u8.onrender.com';
+const API_URL = 'http://127.0.0.1:5555';
 
 
 function getCSRFToken() {
@@ -16,11 +16,11 @@ const apiRequest = async (endpoint, method = 'GET', data = null, requireAuth = t
     headers: {
       'Content-Type': 'application/json',
     },
+    credentials :"include",
   };
 
   // Add auth token if required and available
   if (requireAuth) {
-      config.credentials = "include"
       config.headers["X-CSRF-TOKEN"] = getCSRFToken() 
     
   }
@@ -163,7 +163,7 @@ export const cartAPI = {
 
   // Clear cart
   clearCart: async () => {
-    return await apiRequest('/api/cart/clear', 'DELETE', null, true);
+    return await apiRequest('/api/cart', 'DELETE', null, true);
   }
 };
 
@@ -171,7 +171,6 @@ export const cartAPI = {
 export const ordersAPI = {
   // Create order
   createOrder: async (orderData) => {
-    console.log(orderData)
     return await apiRequest('/api/orders', 'POST', orderData, true);
   },
 
