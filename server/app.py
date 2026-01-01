@@ -41,7 +41,7 @@ def serve(path):
     if path.startswith('api/'):
         from flask import abort
         abort(404)
-    
+    print(path)
     # Check if it's a static file
     file_path = os.path.join(app.static_folder, path)
     if path and os.path.exists(file_path) and os.path.isfile(file_path):

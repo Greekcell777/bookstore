@@ -1,5 +1,5 @@
 // In your Login component - Updated to work with BookStoreContext
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Mail, Lock, Eye, EyeOff, AlertCircle,
@@ -20,7 +20,7 @@ const Login = () => {
   });
 
   // Use BookStoreContext instead of AuthContext
-  const { login, state } = useBookStore();
+  const { login } = useBookStore();
   
   // Display message from redirect
   useEffect(() => {

@@ -1,4 +1,4 @@
-const API_URL = 'https://bookstore-2-upto.onrender.com';
+const API_URL = 'https://bookstore-2-upto.onrender.com/';
 
 
 function getCSRFToken() {
@@ -61,6 +61,7 @@ const apiRequest = async (endpoint, method = 'GET', data = null, requireAuth = t
 // Auth API calls
 export const authAPI = {
   login: async (credentials) => {
+    console.log("Logging in")
     return await apiRequest('/api/login', 'POST', credentials, false);
   },
 
@@ -69,6 +70,7 @@ export const authAPI = {
   },
 
   logout: async () => {
+    console.log('Logging out')
     return await apiRequest('/api/logout', 'POST', null, true);
   },
 

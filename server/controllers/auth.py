@@ -55,9 +55,9 @@ class Login(Resource):
 class Logout(Resource):
     @jwt_required()
     def post(self):
-        response = jsonify({'msg': 'Successfully logged out'})
+        response = make_response(jsonify({'msg': 'Successfully logged out'}))
         unset_access_cookies(response)
-        return make_response({}, 204)
+        return response
     
 class Register(Resource):
     def post(self):
