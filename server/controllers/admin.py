@@ -12,7 +12,7 @@ class AdminDashboardStatsResource(Resource):
     @jwt_required()
     def get(self):
         """Get dashboard statistics"""
-        user_id = get_jwt_identity()['id']
+        user_id = get_jwt_identity()
         user = User.query.get(user_id)
         
         if not user or user.role != 'admin':
@@ -28,7 +28,7 @@ class AdminDashboardStatsResource(Resource):
             total_users = User.query.count()
             total_books = Book.query.count()
             total_orders = Order.query.count()
-            total_reviews = Review.query.filter_by(status='published').count()
+            total_reviews = Review.query.filter_by(status='approved').count()
             
             # Today's stats
             today_orders = Order.query.filter(
@@ -39,7 +39,7 @@ class AdminDashboardStatsResource(Resource):
                 db.func.sum(Order.total_amount)
             ).filter(
                 Order.created_at >= start_of_today,
-                Order.status.in_(['completed', 'delivered'])
+                Order.status.in_(['processing'])
             ).scalar() or decimal.Decimal('0.00')
             
             # Monthly stats
@@ -47,7 +47,7 @@ class AdminDashboardStatsResource(Resource):
                 db.func.sum(Order.total_amount)
             ).filter(
                 Order.created_at >= start_of_month,
-                Order.status.in_(['completed', 'delivered'])
+                Order.status.in_(['processing'])
             ).scalar() or decimal.Decimal('0.00')
             
             # Recent orders
@@ -100,7 +100,7 @@ class AdminDashboardStatsResource(Resource):
                 ).filter(
                     Order.created_at >= start_of_day,
                     Order.created_at < end_of_day,
-                    Order.status.in_(['completed', 'delivered'])
+                    Order.status.in_(['delivered'])
                 ).scalar() or decimal.Decimal('0.00')
                 
                 revenue_data.append({
@@ -133,7 +133,7 @@ class AdminUsersResource(Resource):
     @jwt_required()
     def get(self):
         """Get all users"""
-        user_id = get_jwt_identity()['id']
+        user_id = get_jwt_identity()
         user = User.query.get(user_id)
         
         if not user or user.role != 'admin':
@@ -154,10 +154,9 @@ class AdminUsersResource(Resource):
         if search:
             search_term = f"%{search}%"
             query = query.filter(
-                (User.username.ilike(search_term)) |
                 (User.email.ilike(search_term)) |
-                (User.first_name.ilike(search_term)) |
-                (User.last_name.ilike(search_term))
+                (User.firstName.ilike(search_term)) |
+                (User.secondName.ilike(search_term))
             )
         
         if role:
@@ -166,12 +165,7 @@ class AdminUsersResource(Resource):
         if status:
             query = query.filter_by(status=status)
         
-        # Apply sorting
-        if sort == 'username':
-            if order == 'asc':
-                query = query.order_by(User.username.asc())
-            else:
-                query = query.order_by(User.username.desc())
+        
         elif sort == 'email':
             if order == 'asc':
                 query = query.order_by(User.email.asc())
@@ -193,15 +187,27 @@ class AdminUsersResource(Resource):
             
             users.append({
                 'id': user.id,
-                'username': user.username,
                 'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
+                'first_name': user.firstName,
+                'second_name': user.secondName,
+                'phone': user.phone,
                 'role': user.role,
-                'status': user.status,
-                'email_verified': user.email_verified,
+                'orders': [
+                    {
+                        'id': order.id,
+                        'total':float(order.total_amount),
+                        'item_count': len(order.items) if order.items else 0,
+                        'date': order.created_at.isoformat()
+                    }
+                    for order in user.orders
+                ]if user.orders else None,
+                'address': {
+                    'city': user.addresses[0].town,
+                    'state': user.addresses[0].county,
+                    'country': user.addresses[0].country
+                }if user.addresses else None,
+                'totalSpent': float(sum(order.total_amount for order in user.orders)),
                 'created_at': user.created_at.isoformat(),
-                'last_login': user.last_login.isoformat() if user.last_login else None,
                 'order_count': order_count
             })
         
@@ -222,7 +228,7 @@ class AdminUserResource(Resource):
     @jwt_required()
     def put(self, user_id):
         """Update user"""
-        admin_id = get_jwt_identity()['id']
+        admin_id = get_jwt_identity()
         admin_user = User.query.get(admin_id)
         
         if not admin_user or admin_user.role != 'admin':
@@ -236,8 +242,8 @@ class AdminUserResource(Resource):
         
         try:
             update_fields = [
-                'first_name', 'last_name', 'role', 'status', 
-                'email_verified', 'phone', 'avatar_url', 'bio'
+                'first_name', 'last_name', 'role', 
+                'email_verified', 'phone'
             ]
             
             for field in update_fields:
@@ -264,7 +270,7 @@ class AdminOrdersResource(Resource):
     @jwt_required()
     def get(self):
         """Get all orders"""
-        user_id = get_jwt_identity()['id']
+        user_id = get_jwt_identity()
         user = User.query.get(user_id)
         
         if not user or user.role != 'admin':
@@ -303,9 +309,7 @@ class AdminOrdersResource(Resource):
         if search:
             search_term = f"%{search}%"
             query = query.filter(
-                (Order.order_number.ilike(search_term)) |
-                (Order.shipping_full_name.ilike(search_term)) |
-                (Order.shipping_email.ilike(search_term))
+                (Order.order_number.ilike(search_term))
             )
         
         # Apply sorting
@@ -331,17 +335,32 @@ class AdminOrdersResource(Resource):
                 'order_number': order.order_number,
                 'user': {
                     'id': user.id,
-                    'username': user.username,
-                    'email': user.email
+                    'name': f'{user.firstName} {user.secondName}',
+                    'email': user.email,
+                    'phone': user.phone,
+                    'role': user.role
                 } if user else None,
                 'status': order.status,
+                'subtotal': float(order.subtotal),
+                'tax': float(order.tax_amount),
+                'shipping_amount': float(order.shipping_amount),
                 'total_amount': float(order.total_amount),
-                'item_count': order.item_count,
+                'items': [{
+                    'id': item.id,
+                    'book_image': item.book.cover_image_url,
+                    'book_title': item.book_title,
+                    'book_author': item.book_author,
+                    'unit_price': float(item.unit_price),
+                    'quantity': item.quantity,
+                    'total_price': float(item.total_price)
+                }for item in order.items] if order.items else 0,
+                'item_count': len(order.items),
                 'created_at': order.created_at.isoformat(),
                 'shipping_address': {
-                    'full_name': order.shipping_full_name,
-                    'city': order.shipping_city,
-                    'state': order.shipping_state
+                    'full_name': order.shipping_address.full_name,
+                    'city': order.shipping_address.town,
+                    'state': order.shipping_address.county,
+                    'country': order.shipping_address.country
                 }
             })
         
@@ -362,7 +381,7 @@ class AdminOrderStatusResource(Resource):
     @jwt_required()
     def put(self, order_id):
         """Update order status"""
-        admin_id = get_jwt_identity()['id']
+        admin_id = get_jwt_identity()
         admin_user = User.query.get(admin_id)
         
         if not admin_user or admin_user.role != 'admin':
@@ -392,7 +411,7 @@ class AdminOrderStatusResource(Resource):
                 order.tracking_number = tracking_number
             
             if notes:
-                order.notes = notes
+                order.customer_note = notes
             
             order.updated_at = datetime.utcnow()
             db.session.commit()
@@ -415,7 +434,7 @@ class AdminReviewsResource(Resource):
     @jwt_required()
     def get(self):
         """Get all reviews"""
-        user_id = get_jwt_identity()['id']
+        user_id = get_jwt_identity()
         user = User.query.get(user_id)
         
         if not user or user.role != 'admin':
@@ -441,6 +460,106 @@ class AdminReviewsResource(Resource):
         
         if user_id_filter:
             query = query.filter_by(user_id=user_id_filter)
+        print('here')
+        # Apply sorting
+        if sort == 'rating':
+            if order == 'asc':
+                query = query.order_by(Review.rating.asc())
+            else:
+                query = query.order_by(Review.rating.desc())
+        elif sort == 'helpful':
+            if order == 'asc':
+                query = query.order_by(Review.helpful_count.asc())
+            else:
+                query = query.order_by(Review.helpful_count.desc())
+        else:  # created_at
+            if order == 'asc':
+                query = query.order_by(Review.created_at.asc())
+            else:
+                query = query.order_by(Review.created_at.desc())
+        
+        # Pagination
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        
+        reviews = []
+        for review in pagination.items:
+            # print(review)
+            user = User.query.get(review.user_id)
+            book = Book.query.get(review.book_id)
+            
+            reviews.append({
+                'id': review.id,
+                'user': {
+                    'id': user.id,
+                    'email': user.email
+                } if user else None,
+                'book': {
+                    'id': book.id,
+                    'title': book.title,
+                    'author': book.author
+                } if book else None,
+                'rating': review.rating,
+                'content': review.content,
+                'status': review.status,
+                'helpful_count': review.helpful_count,
+                'verified_purchase': review.is_verified_purchase,
+                'admin_response': review.moderation_notes,
+                'created_at': review.created_at.isoformat(),
+                'updated_at': review.updated_at.isoformat() if review.updated_at else None
+            })
+        
+        return {
+            'reviews': reviews,
+            'pagination': {
+                'page': pagination.page,
+                'per_page': pagination.per_page,
+                'total': pagination.total,
+                'pages': pagination.pages
+            }
+        }, 200
+
+
+class AdminReviewResource(Resource):
+    """Admin review management"""
+    
+    @jwt_required()
+    def get(self):
+        """Get all reviews with filtering"""
+        current_user = User.query.get(get_jwt_identity())
+        if not current_user or current_user.role != 'admin':
+            return {'error': 'Admin access required'}, 403
+        
+        # Parse query parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        status = request.args.get('status')
+        book_id = request.args.get('book_id')
+        user_id = request.args.get('user_id')
+        sort = request.args.get('sort', 'created_at')
+        order = request.args.get('order', 'desc')
+        search = request.args.get('search', '')
+        
+        # Build query
+        query = Review.query
+        
+        if status:
+            query = query.filter_by(status=status)
+        if book_id:
+            query = query.filter_by(book_id=book_id)
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+        
+        # Search
+        if search:
+            search_term = f"%{search}%"
+            query = query.join(User).filter(
+                db.or_(
+                    User.username.ilike(search_term),
+                    User.email.ilike(search_term),
+                    Review.content.ilike(search_term),
+                    Review.title.ilike(search_term)
+                )
+            )
         
         # Apply sorting
         if sort == 'rating':
@@ -466,28 +585,34 @@ class AdminReviewsResource(Resource):
         for review in pagination.items:
             user = User.query.get(review.user_id)
             book = Book.query.get(review.book_id)
-            
             reviews.append({
                 'id': review.id,
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email
-                } if user else None,
                 'book': {
                     'id': book.id,
                     'title': book.title,
-                    'author': book.author
+                    'author': book.author,
+                    'image': book.cover_image_url
                 } if book else None,
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'name': f"{user.first_name} {user.last_name}".strip() or user.username
+                } if user else None,
                 'rating': review.rating,
+                'title': review.title,
                 'content': review.content,
                 'status': review.status,
-                'helpful_count': review.helpful_count,
-                'unhelpful_count': review.unhelpful_count,
-                'verified_purchase': review.verified_purchase,
-                'admin_response': review.admin_response,
-                'created_at': review.created_at.isoformat(),
-                'updated_at': review.updated_at.isoformat() if review.updated_at else None
+                'helpfulCount': review.helpful_count,
+                'unhelpfulCount': review.not_helpful_count,
+                'verifiedPurchase': review.is_verified_purchase,
+                'createdAt': review.created_at.isoformat(),
+                'updatedAt': review.updated_at.isoformat() if review.updated_at else None,
+                'response': {
+                    'adminName': review.moderation_notes,
+                    'content': review.moderated_by,
+                    'createdAt': review.moderated_at.isoformat() if review.moderated_at else None
+                } if review.moderated_by else None
             })
         
         return {
@@ -499,18 +624,12 @@ class AdminReviewsResource(Resource):
                 'pages': pagination.pages
             }
         }, 200
-
-
-class AdminReviewResource(Resource):
-    """Admin single review management"""
     
     @jwt_required()
     def put(self, review_id):
         """Update review status"""
-        admin_id = get_jwt_identity()['id']
-        admin_user = User.query.get(admin_id)
-        
-        if not admin_user or admin_user.role != 'admin':
+        current_user = User.query.get(get_jwt_identity())
+        if not current_user or current_user.role != 'admin':
             return {'error': 'Admin access required'}, 403
         
         review = Review.query.get_or_404(review_id)
@@ -518,21 +637,23 @@ class AdminReviewResource(Resource):
         data = request.get_json()
         if not data:
             return {'error': 'No data provided'}, 400
-        
-        status = data.get('status')
-        admin_response = data.get('admin_response')
-        
+        print(data)
         try:
-            if status:
-                valid_statuses = ['pending', 'published', 'rejected', 'flagged']
-                if status not in valid_statuses:
-                    return {'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}, 400
-                review.status = status
+            if 'status' in data:
+                status = data['status']
+                if status in ['approved', 'rejected']:
+                    if status == 'approved':
+                        review.approve(current_user.id)
+                        print ('here')
+                    else:
+                        review.reject(current_user.id, data.get('admin_response'))
+                        print ('here')
+                else:
+                    review.status = status
             
-            if admin_response:
-                review.admin_response = admin_response
+            if 'admin_response' in data:
+                review.moderation_notes = data['admin_response']
             
-            review.updated_at = datetime.utcnow()
             db.session.commit()
             
             return {
@@ -544,3 +665,60 @@ class AdminReviewResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {'error': f'Failed to update review: {str(e)}'}, 500
+    
+    @jwt_required()
+    def delete(self, review_id):
+        """Delete review"""
+        current_user = User.query.get(get_jwt_identity())
+        if not current_user or current_user.role != 'admin':
+            return {'error': 'Admin access required'}, 403
+        
+        review = Review.query.get_or_404(review_id)
+        
+        try:
+            db.session.delete(review)
+            db.session.commit()
+            
+            return {'message': 'Review deleted successfully'}, 200
+            
+        except Exception as e:
+            db.session.rollback()
+            return {'error': f'Failed to delete review: {str(e)}'}, 500
+
+
+class AdminReviewResponseResource(Resource):
+    """Admin review responses"""
+    
+    @jwt_required()
+    def post(self, review_id):
+        """Add admin response to review"""
+        current_user = User.query.get(get_jwt_identity())
+        if not current_user or current_user.role != 'admin':
+            return {'error': 'Admin access required'}, 403
+        
+        review = Review.query.get_or_404(review_id)
+        
+        data = request.get_json()
+        if not data or not data.get('content'):
+            return {'error': 'Response content required'}, 400
+        
+        try:
+            review.moderation_notes = data['content']
+            review.moderated_by = current_user.id
+            review.moderated_at = datetime.utcnow()
+            
+            db.session.commit()
+            
+            return {
+                'message': 'Response added successfully',
+                'review_id': review.id,
+                'response': {
+                    'adminName': f"{current_user.first_name} {current_user.last_name}".strip() or current_user.username,
+                    'content': data['content'],
+                    'createdAt': review.moderated_at.isoformat()
+                }
+            }, 200
+            
+        except Exception as e:
+            db.session.rollback()
+            return {'error': f'Failed to add response: {str(e)}'}, 500

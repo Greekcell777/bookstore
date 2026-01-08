@@ -10,7 +10,7 @@ from server.controllers.reviews import BookReviewsResource, ReviewResource, Revi
 from server.controllers.admin import (
     AdminDashboardStatsResource, AdminUsersResource, AdminUserResource,
     AdminOrdersResource, AdminOrderStatusResource, AdminReviewsResource,
-    AdminReviewResource
+    AdminReviewResource, AdminReviewResponseResource
 )
 from server.controllers.wishlist import WishlistResource, WishlistItemResource, WishlistMoveToCartResource
 
@@ -49,3 +49,4 @@ def addResource(api):
     api.add_resource(AdminOrderStatusResource, '/api/admin/orders/<int:order_id>/status')
     api.add_resource(AdminReviewsResource, '/api/admin/reviews')
     api.add_resource(AdminReviewResource, '/api/admin/reviews/<int:review_id>')
+    api.add_resource(AdminReviewResponseResource, '/api/admin/reviews/<int:review_id>/response')

@@ -248,7 +248,7 @@ const MinimalNavbar = () => {
                       </div>
                       
                       <Link 
-                        to="/profile" 
+                        to="/profile"
                         className="flex items-center px-4 py-3 hover:bg-gray-50 text-sm transition-colors"
                         onClick={() => setIsUserDropdownOpen(false)}
                       >
@@ -279,9 +279,9 @@ const MinimalNavbar = () => {
                         )}
                       </Link>
                       
-                      {user?.is_admin && (
+                      {user?.role === 'admin' && (
                         <Link 
-                          to="/admin" 
+                          to="/admin/dashboard" 
                           className="flex items-center px-4 py-3 hover:bg-gray-50 text-sm transition-colors border-t"
                           onClick={() => setIsUserDropdownOpen(false)}
                         >
@@ -428,9 +428,9 @@ const MinimalNavbar = () => {
                     Cart {cartItemCount > 0 && `(${cartItemCount})`}
                   </Link>
                   
-                  {user?.is_admin && (
+                  {user?.role === 'admin' && (
                     <Link 
-                      to="/admin" 
+                      to="/admin/dashboard" 
                       className="px-4 py-3 hover:bg-gray-50 rounded-md transition-colors text-red-600 font-medium"
                       onClick={() => setIsMenuOpen(false)}
                     >

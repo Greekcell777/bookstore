@@ -17,7 +17,8 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
   const [formData, setFormData] = useState({
     title: '',
     author: '',
-    isbn: '',
+    isbn_10: '',
+    isbn_13: '',
     category: '',
     price: '',
     discountPrice: '',
@@ -66,7 +67,8 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
       setFormData({
         title: '',
         author: '',
-        isbn: '',
+        isbn_10: '',
+        isbn_13: '',
         category: '',
         price: '',
         discountPrice: '',
@@ -99,7 +101,7 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
       [name]: type === 'checkbox' ? checked : value
     }));
   };
-
+  console.log(formData)
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -357,14 +359,14 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          ISBN *
+                          ISBN 10 *
                         </label>
                         <div className="flex items-center p-3 border rounded-lg">
                           <Hash size={20} className="text-gray-400 mr-3" />
                           <input
                             type="text"
-                            name="isbn"
-                            value={formData.isbn}
+                            name="isbn_10"
+                            value={formData.isbn_10}
                             onChange={handleInputChange}
                             disabled={mode === 'view'}
                             className="flex-1 outline-none disabled:bg-transparent"
@@ -373,6 +375,24 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                           />
                         </div>
                       </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ISBN 13 *
+                        </label>
+                        <div className="flex items-center p-3 border rounded-lg">
+                          <Hash size={20} className="text-gray-400 mr-3" />
+                          <input
+                            type="text"
+                            name="isbn_13"
+                            value={formData.isbn_13}
+                            onChange={handleInputChange}
+                            disabled={mode === 'view'}
+                            className="flex-1 outline-none disabled:bg-transparent"
+                            placeholder="Enter ISBN number"
+                            required
+                          />
+                        </div>
+                    </div>
                     </div>
                   </div>
 
@@ -537,19 +557,20 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Tags
                     </label>
+                    {console.log(formData)}
                     <input
                       type="text"
-                      value={formData.tags.join(', ')}
+                      value={formData.categories.map((cat)=>cat.name).join(', ')}
                       onChange={handleTagsChange}
                       disabled={mode === 'view'}
                       className="w-full p-3 border rounded-lg outline-none disabled:bg-transparent"
                       placeholder="Separate tags with commas"
                     />
-                    {formData.tags.length > 0 && (
+                    {formData.categories.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {formData.tags.map((tag, index) => (
+                        {formData.categories.map((tag, index) => (
                           <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                            {tag}
+                            {tag.name}
                           </span>
                         ))}
                       </div>
@@ -566,11 +587,11 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                       Regular Price *
                     </label>
                     <div className="flex items-center p-3 border rounded-lg">
-                      <DollarSign size={20} className="text-gray-400 mr-3" />
+                      KES 
                       <input
                         type="number"
                         name="price"
-                        value={formData.price}
+                        value={(formData.list_price * 130).toFixed(2)}
                         onChange={handleInputChange}
                         disabled={mode === 'view'}
                         className="flex-1 outline-none disabled:bg-transparent"
@@ -587,11 +608,11 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                       Discount Price
                     </label>
                     <div className="flex items-center p-3 border rounded-lg">
-                      <DollarSign size={20} className="text-gray-400 mr-3" />
+                      KES 
                       <input
                         type="number"
                         name="discountPrice"
-                        value={formData.discountPrice}
+                        value={(formData.sale_price * 130).toFixed(2)}
                         onChange={handleInputChange}
                         disabled={mode === 'view'}
                         className="flex-1 outline-none disabled:bg-transparent"
@@ -602,7 +623,7 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                     </div>
                     {formData.discountPrice && formData.price && (
                       <div className="mt-2 text-sm text-green-600">
-                        Save {((1 - formData.discountPrice / formData.price) * 100).toFixed(1)}%
+                        Save {((1 - formData.sale_rice / formData.list_price) * 100).toFixed(1)}%
                       </div>
                     )}
                   </div>
@@ -616,7 +637,7 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                       <input
                         type="number"
                         name="stock"
-                        value={formData.stock}
+                        value={formData.stock_quantity}
                         onChange={handleInputChange}
                         disabled={mode === 'view'}
                         className="flex-1 outline-none disabled:bg-transparent"
@@ -671,7 +692,7 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                       <input
                         type="number"
                         name="weight"
-                        value={formData.weight}
+                        value={formData.weight_grams}
                         onChange={handleInputChange}
                         disabled={mode === 'view'}
                         className="w-full p-3 border rounded-lg outline-none disabled:bg-transparent"
@@ -710,7 +731,7 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                         <input
                           type="number"
                           name="rating"
-                          value={formData.rating}
+                          value={formData.average_rating}
                           onChange={handleInputChange}
                           disabled={mode === 'view'}
                           className="flex-1 outline-none disabled:bg-transparent"
@@ -729,7 +750,7 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                       <input
                         type="number"
                         name="reviewsCount"
-                        value={formData.reviewsCount}
+                        value={formData.review_count}
                         onChange={handleInputChange}
                         disabled={mode === 'view'}
                         className="w-full p-3 border rounded-lg outline-none disabled:bg-transparent"
@@ -747,7 +768,7 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                         <input
                           type="checkbox"
                           name="featured"
-                          checked={formData.featured}
+                          checked={formData.is_featured}
                           onChange={handleInputChange}
                           disabled={mode === 'view'}
                           className="h-4 w-4 text-blue-600 rounded"
@@ -762,7 +783,7 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                         <input
                           type="checkbox"
                           name="bestseller"
-                          checked={formData.bestseller}
+                          checked={formData.is_bestseller}
                           onChange={handleInputChange}
                           disabled={mode === 'view'}
                           className="h-4 w-4 text-blue-600 rounded"
@@ -777,7 +798,7 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                         <input
                           type="checkbox"
                           name="newRelease"
-                          checked={formData.newRelease}
+                          checked={formData.is_new_release}
                           onChange={handleInputChange}
                           disabled={mode === 'view'}
                           className="h-4 w-4 text-blue-600 rounded"
@@ -796,11 +817,13 @@ const BookModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          ISBN-13
+                          {formData.isbn_10?
+                          'ISBN 10':
+                          'ISBN 13'}
                         </label>
                         <input
                           type="text"
-                          value={formData.isbn}
+                          value={formData.isbn_10 || formData.isbn_13}
                           disabled
                           className="w-full p-3 border rounded-lg bg-gray-50"
                         />

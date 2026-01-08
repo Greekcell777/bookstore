@@ -55,7 +55,8 @@ class BookReviewsResource(Resource):
                 'id': review.id,
                 'user': {
                     'id': user.id,
-                    'username': user.username,
+                    'first_name': user.first_name,
+                    'second_name': user.second_name,
                     'avatar_url': user.avatar_url
                 } if user else None,
                 'rating': review.rating,

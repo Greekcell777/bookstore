@@ -303,11 +303,11 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
                 {/* Price */}
                 <div className="text-right">
                   <div className="text-2xl font-bold text-gray-900 mb-2">
-                    ${currentPrice?.toFixed(2) || '0.00'}
+                    KES{(currentPrice?.toFixed(2) * 130).toFixed(2) || '0.00'}
                   </div>
                   {isOnSale && originalPrice && (
                     <div className="text-sm text-gray-500 line-through">
-                      ${originalPrice.toFixed(2)}
+                      KES{(originalPrice.toFixed(2) * 130).toFixed(2)}
                     </div>
                   )}
                   {!inStock && (
@@ -516,11 +516,11 @@ const BookCard = ({ book, viewMode = 'grid' }) => {
           <div className="flex justify-between items-center">
             <div>
               <span className="text-2xl font-bold text-gray-900">
-                ${currentPrice?.toFixed(2) || '0.00'}
+                KES{(currentPrice?.toFixed(2) * 130).toFixed(2) || '0.00'}
               </span>
               {isOnSale && originalPrice && (
                 <span className="ml-2 text-sm text-gray-400 line-through">
-                  ${originalPrice.toFixed(2)}
+                  KES{(originalPrice.toFixed(2) * 130).toFixed(2)}
                 </span>
               )}
             </div>

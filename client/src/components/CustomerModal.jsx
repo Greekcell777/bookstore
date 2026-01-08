@@ -33,11 +33,11 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
   useEffect(() => {
     if (initialData) {
       setFormData({
-        firstName: initialData.firstName || '',
-        lastName: initialData.lastName || '',
+        firstName: initialData.first_name || '',
+        lastName: initialData.second_name || '',
         email: initialData.email || '',
         phone: initialData.phone || '',
-        address: initialData.address || '',
+        address: (initialData.address ? Object.values(initialData.address).map(i=>i).join(', ') :  ''),
         status: initialData.status || 'active',
         emailVerified: initialData.emailVerified || false,
         phoneVerified: initialData.phoneVerified || false,
@@ -91,6 +91,7 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
         ...prev,
         [name]: type === 'checkbox' ? checked : value
       }));
+      console.log(formData)
     }
   };
 
@@ -177,7 +178,7 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
                 <User size={24} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{getModalTitle()}</h2>
+                <h2 className="text-xl font-bold text-gray-900">{formData.firstName} {formData.lastName}</h2>
                 <p className="text-sm text-gray-600">
                   {mode === 'view' ? 'Customer details and statistics' : 
                    mode === 'edit' ? 'Update customer information' : 
@@ -313,7 +314,7 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
                                 <input
                                   type="checkbox"
                                   name="phoneVerified"
-                                  checked={formData.phoneVerified}
+                                  checked={formData.address.city}
                                   onChange={handleInputChange}
                                   className="h-4 w-4 text-blue-600 rounded"
                                 />
@@ -362,9 +363,9 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
                       {mode === 'view' ? (
                         <div className="space-y-4">
                           <div>
-                            <span className={`px-3 py-2 rounded-lg text-sm font-medium ${getStatusColor(initialData.status)} inline-block`}>
+                            {/* <span className={`px-3 py-2 rounded-lg text-sm font-medium ${getStatusColor(initialData.status)} inline-block`}>
                               {initialData.status.charAt(0).toUpperCase() + initialData.status.slice(1)}
-                            </span>
+                            </span> */}
                           </div>
                           <div>
                             <p className="text-sm text-gray-600">Membership Tier</p>
@@ -418,7 +419,7 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
                         <div className="space-y-3">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Total Orders</span>
-                            <span className="font-bold">{initialData.totalOrders}</span>
+                            <span className="font-bold">{initialData.order_count}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Total Spent</span>
@@ -434,14 +435,14 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Registration Date</span>
-                            <span className="font-bold">{formatDate(initialData.registrationDate)}</span>
+                            <span className="font-bold">{formatDate(initialData.created_at)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Last Login</span>
                             <span className="font-bold">
                               {initialData.lastLogin 
                                 ? new Date(initialData.lastLogin).toLocaleDateString()
-                                : 'Never'
+                                : ''
                               }
                             </span>
                           </div>
@@ -471,7 +472,7 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
                 <div className="space-y-6">
                   {/* Order Statistics */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-lg text-white">
+                    <div className="bg-linear-to-r from-blue-500 to-blue-600 p-6 rounded-lg text-white">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm opacity-90">Total Orders</p>
@@ -480,7 +481,7 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
                         <ShoppingBag size={32} className="opacity-80" />
                       </div>
                     </div>
-                    <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-lg text-white">
+                    <div className="bg-linear-to-r from-green-500 to-green-600 p-6 rounded-lg text-white">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm opacity-90">Total Spent</p>
@@ -489,7 +490,7 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
                         <DollarSign size={32} className="opacity-80" />
                       </div>
                     </div>
-                    <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-lg text-white">
+                    <div className="bg-linear-to-r from-purple-500 to-purple-600 p-6 rounded-lg text-white">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm opacity-90">Avg. Order Value</p>
@@ -498,7 +499,7 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
                         <CreditCard size={32} className="opacity-80" />
                       </div>
                     </div>
-                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 rounded-lg text-white">
+                    <div className="bg-linear-to-r from-orange-500 to-orange-600 p-6 rounded-lg text-white">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm opacity-90">Favorite Category</p>
@@ -510,7 +511,7 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
                   </div>
 
                   {/* Recent Orders Table */}
-                  {initialData.recentOrders && initialData.recentOrders.length > 0 ? (
+                  {initialData.orders && initialData.orders.length > 0 ? (
                     <div className="bg-white border rounded-lg overflow-hidden">
                       <div className="p-6 border-b">
                         <h3 className="font-semibold text-gray-900">Recent Orders</h3>
@@ -528,13 +529,13 @@ const CustomerModal = ({ isOpen, onClose, mode = 'view', initialData = null, onS
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200">
-                            {initialData.recentOrders.map((order) => (
+                            {initialData.orders.map((order) => (
                               <tr key={order.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4">
                                   <span className="font-medium text-blue-600">{order.id}</span>
                                 </td>
                                 <td className="px-6 py-4">{formatDate(order.date)}</td>
-                                <td className="px-6 py-4">1 item</td>
+                                <td className="px-6 py-4">{order.item_count}</td>
                                 <td className="px-6 py-4 font-bold">{formatCurrency(order.total)}</td>
                                 <td className="px-6 py-4">
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${

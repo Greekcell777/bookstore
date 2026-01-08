@@ -122,6 +122,8 @@ class BookListResource(Resource):
         return {
             'id': book.id,
             'title': book.title,
+            'isbn_10': book.isbn_10,
+            'isbn_13': book.isbn_13,
             'author': book.author,
             'slug': book.slug,
             'format': book.format,

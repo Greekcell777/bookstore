@@ -1,224 +1,89 @@
-import React, { useState } from 'react';
-import { Search, Filter, Plus, Edit, Trash2, Eye, MoreVertical, Download, Upload, BookOpen, Grid, List } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Search, Filter, Plus, Edit, Trash2, Eye, 
+  MoreVertical, Download, Upload, BookOpen, 
+  Grid, List, Loader2, AlertCircle, RefreshCw,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
+} from 'lucide-react';
 import BookModal from './BookModal';
+import { useBookStore } from './BookstoreContext';
 
 const BooksManagement = () => {
+  const { 
+    books: contextBooks, 
+    fetchBooks, 
+    isLoading, 
+    error,
+    booksAPI 
+  } = useBookStore();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBooks, setSelectedBooks] = useState([]);
   const [viewMode, setViewMode] = useState('table');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('view');
   const [selectedBook, setSelectedBook] = useState(null);
+  const [books, setBooks] = useState([]);
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localError, setLocalError] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Sample books data with more details
-  const [books, setBooks] = useState([
-    {
-      id: 1,
-      title: 'The Silent Patient',
-      author: 'Alex Michaelides',
-      isbn: '978-1-250-30169-7',
-      category: 'Mystery & Thriller',
-      price: 29.99,
-      discountPrice: 24.99,
-      stock: 45,
-      status: 'Published',
-      sales: 234,
-      rating: 4.5,
-      description: 'The Silent Patient is a shocking psychological thriller of a woman\'s act of violence against her husband—and of the therapist obsessed with uncovering her motive.',
-      shortDescription: 'A psychological thriller about a woman who shoots her husband and then stops speaking.',
-      pages: 336,
-      language: 'English',
-      publisher: 'Celadon Books',
-      publicationDate: '2019-02-05',
-      weight: '500',
-      dimensions: '8.5×5.5×1.2',
-      tags: ['Psychological', 'Thriller', 'Mystery'],
-      featured: true,
-      bestseller: true,
-      newRelease: false,
-      imageUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400'
-    },
-    {
-      id: 2,
-      title: 'Atomic Habits',
-      author: 'James Clear',
-      isbn: '978-0-735-21148-7',
-      category: 'Self-Help',
-      price: 24.99,
-      discountPrice: 22.99,
-      stock: 32,
-      status: 'Published',
-      sales: 189,
-      rating: 4.7,
-      description: 'Tiny Changes, Remarkable Results: An Easy & Proven Way to Build Good Habits & Break Bad Ones.',
-      shortDescription: 'A guide to building good habits and breaking bad ones.',
-      pages: 320,
-      language: 'English',
-      publisher: 'Avery',
-      publicationDate: '2018-10-16',
-      weight: '450',
-      dimensions: '8.4×5.5×1.1',
-      tags: ['Self-Help', 'Productivity', 'Psychology'],
-      featured: true,
-      bestseller: true,
-      newRelease: false,
-      imageUrl: 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?w=400'
-    },
-    {
-      id: 3,
-      title: 'Project Hail Mary',
-      author: 'Andy Weir',
-      isbn: '978-0-593-20021-1',
-      category: 'Science Fiction',
-      price: 27.99,
-      discountPrice: 24.99,
-      stock: 0,
-      status: 'Out of Stock',
-      sales: 156,
-      rating: 4.8,
-      description: 'A lone astronaut must save the earth from disaster in this incredible new science-based thriller from the #1 New York Times bestselling author of The Martian.',
-      shortDescription: 'A lone astronaut must save the earth from disaster.',
-      pages: 496,
-      language: 'English',
-      publisher: 'Ballantine Books',
-      publicationDate: '2021-05-04',
-      weight: '680',
-      dimensions: '9.3×6.4×1.7',
-      tags: ['Sci-Fi', 'Space', 'Adventure'],
-      featured: true,
-      bestseller: true,
-      newRelease: true,
-      imageUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400'
-    },
-    {
-      id: 4,
-      title: 'The Midnight Library',
-      author: 'Matt Haig',
-      isbn: '978-0-525-55948-1',
-      category: 'Fiction',
-      price: 19.99,
-      stock: 28,
-      status: 'Published',
-      sales: 134,
-      rating: 4.4,
-      description: 'Between life and death there is a library, and within that library, the shelves go on forever. Every book provides a chance to try another life you could have lived.',
-      shortDescription: 'A novel about a library that contains books that let you experience the lives you could have lived.',
-      pages: 304,
-      language: 'English',
-      publisher: 'Viking',
-      publicationDate: '2020-08-13',
-      weight: '420',
-      dimensions: '8.2×5.5×1.0',
-      tags: ['Fiction', 'Fantasy', 'Philosophical'],
-      featured: false,
-      bestseller: true,
-      newRelease: false,
-      imageUrl: 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=400'
-    },
-    {
-      id: 5,
-      title: 'Dune',
-      author: 'Frank Herbert',
-      isbn: '978-0-441-17271-8',
-      category: 'Science Fiction',
-      price: 29.99,
-      discountPrice: 26.99,
-      stock: 15,
-      status: 'Published',
-      sales: 128,
-      rating: 4.6,
-      description: 'Set on the desert planet Arrakis, Dune is the story of the boy Paul Atreides, heir to a noble family tasked with ruling an inhospitable world where the only thing of value is the "spice" melange.',
-      shortDescription: 'Epic science fiction set on the desert planet Arrakis.',
-      pages: 412,
-      language: 'English',
-      publisher: 'Ace',
-      publicationDate: '1965-08-01',
-      weight: '560',
-      dimensions: '8.1×5.4×1.3',
-      tags: ['Classic', 'Sci-Fi', 'Adventure'],
-      featured: true,
-      bestseller: true,
-      newRelease: false,
-      imageUrl: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400'
-    },
-    {
-      id: 6,
-      title: 'The Hobbit',
-      author: 'J.R.R. Tolkien',
-      isbn: '978-0-618-34625-6',
-      category: 'Fantasy',
-      price: 22.99,
-      discountPrice: 19.99,
-      stock: 50,
-      status: 'Published',
-      sales: 432,
-      rating: 4.8,
-      description: 'Bilbo Baggins is a hobbit who enjoys a comfortable, unambitious life, rarely traveling any farther than his pantry or cellar.',
-      shortDescription: 'The adventure of Bilbo Baggins in Middle-earth.',
-      pages: 300,
-      language: 'English',
-      publisher: 'Houghton Mifflin',
-      publicationDate: '1937-09-21',
-      weight: '480',
-      dimensions: '8.2×5.5×1.0',
-      tags: ['Fantasy', 'Adventure', 'Classic'],
-      featured: true,
-      bestseller: true,
-      newRelease: false,
-      imageUrl: 'https://images.unsplash.com/photo-1621351183012-e2f9972dd9bf?w=400'
-    },
-    {
-      id: 7,
-      title: 'Educated',
-      author: 'Tara Westover',
-      isbn: '978-0-399-59050-4',
-      category: 'Memoir',
-      price: 26.99,
-      stock: 22,
-      status: 'Published',
-      sales: 198,
-      rating: 4.7,
-      description: 'Tara Westover was seventeen the first time she set foot in a classroom. Born to survivalists in the mountains of Idaho, she prepared for the end of the world by stockpiling home-canned peaches.',
-      shortDescription: 'A memoir about a woman who leaves her survivalist family and goes on to earn a PhD.',
-      pages: 334,
-      language: 'English',
-      publisher: 'Random House',
-      publicationDate: '2018-02-20',
-      weight: '520',
-      dimensions: '8.5×5.8×1.2',
-      tags: ['Memoir', 'Biography', 'Education'],
-      featured: false,
-      bestseller: true,
-      newRelease: false,
-      imageUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400'
-    },
-    {
-      id: 8,
-      title: 'Sapiens: A Brief History of Humankind',
-      author: 'Yuval Noah Harari',
-      isbn: '978-0-06-231609-7',
-      category: 'History',
-      price: 31.99,
-      discountPrice: 28.99,
-      stock: 0,
-      status: 'Out of Stock',
-      sales: 345,
-      rating: 4.5,
-      description: 'From a renowned historian comes a groundbreaking narrative of humanity\'s creation and evolution that explores the ways in which biology and history have defined us.',
-      shortDescription: 'A brief history of humankind from the Stone Age to the present.',
-      pages: 464,
-      language: 'English',
-      publisher: 'Harper',
-      publicationDate: '2015-02-10',
-      weight: '620',
-      dimensions: '9.0×6.0×1.4',
-      tags: ['History', 'Anthropology', 'Science'],
-      featured: false,
-      bestseller: true,
-      newRelease: false,
-      imageUrl: 'https://images.unsplash.com/photo-1531346688376-ab6275c4725e?w=400'
-    }
-  ]);
+  // Load books from context or API
+  useEffect(() => {
+    const loadBooks = async () => {
+      setLocalLoading(true);
+      setLocalError(null);
+      try {
+        // If we have booksAPI, use it with pagination
+        if (booksAPI && booksAPI.getBooks) {
+          const params = {
+            page: currentPage,
+            per_page: itemsPerPage,
+            search: searchTerm
+          };
+          
+          const response = await booksAPI.getBooks(params);
+          console.log('API response:', response);
+          
+          if (response.books) {
+            setBooks(response.books);
+            setTotalItems(response.pagination?.total || response.books.length);
+            setTotalPages(response.pagination?.pages || 1);
+          } else if (Array.isArray(response)) {
+            // Handle direct array response
+            setBooks(response);
+            setTotalItems(response.length);
+            setTotalPages(Math.ceil(response.length / itemsPerPage));
+          }
+        } else if (contextBooks && contextBooks.length > 0) {
+          // Use books from context
+          setBooks(contextBooks);
+          setTotalItems(contextBooks.length);
+          setTotalPages(Math.ceil(contextBooks.length / itemsPerPage));
+        } else {
+          // Fetch books from regular API
+          await fetchBooks();
+        }
+      } catch (err) {
+        console.error('Failed to load books:', err);
+        setLocalError('Failed to load books. Please try again.');
+      } finally {
+        setLocalLoading(false);
+      }
+    };
+
+    loadBooks();
+  }, [contextBooks, fetchBooks, booksAPI, currentPage, itemsPerPage, searchTerm]);
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // Modal handlers
   const handleOpenModal = (mode, book = null) => {
@@ -232,34 +97,84 @@ const BooksManagement = () => {
     setSelectedBook(null);
   };
 
-  const handleSaveBook = (bookData) => {
-    if (modalMode === 'add') {
-      // Add new book
-      const newBook = {
-        ...bookData,
-        id: books.length + 1,
-        sales: Math.floor(Math.random() * 200) + 50, // Random sales for demo
-        rating: parseFloat((Math.random() * 1 + 3.5).toFixed(1)), // Random rating for demo
-      };
-      setBooks([...books, newBook]);
-    } else if (modalMode === 'edit' && selectedBook) {
-      // Update existing book
-      setBooks(books.map(book => 
-        book.id === selectedBook.id ? { ...bookData, id: book.id } : book
-      ));
+  const handleSaveBook = async (bookData) => {
+    try {
+      setLocalLoading(true);
+      
+      if (modalMode === 'add') {
+        if (booksAPI && booksAPI.createBook) {
+          const response = await booksAPI.createBook(bookData);
+          if (response.book) {
+            // Refresh books list
+            await handleRefreshBooks();
+          }
+        } else {
+          // Fallback: Add to local state
+          const newBook = {
+            ...bookData,
+            id: books.length + 1,
+            sales: Math.floor(Math.random() * 200) + 50,
+            rating: parseFloat((Math.random() * 1 + 3.5).toFixed(1)),
+            status: 'Published',
+            stock: bookData.stock || 0,
+            imageUrl: bookData.imageUrl || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400'
+          };
+          setBooks(prev => [...prev, newBook]);
+          setTotalItems(prev => prev + 1);
+        }
+      } else if (modalMode === 'edit' && selectedBook) {
+        if (booksAPI && booksAPI.updateBook) {
+          const response = await booksAPI.updateBook(selectedBook.id, bookData);
+          if (response.book) {
+            await handleRefreshBooks();
+          }
+        } else {
+          setBooks(prev => 
+            prev.map(book => 
+              book.id === selectedBook.id ? { ...book, ...bookData, id: book.id } : book
+            )
+          );
+        }
+      }
+      console.log(books)
+      
+      handleCloseModal();
+    } catch (error) {
+      console.error('Failed to save book:', error);
+      setLocalError('Failed to save book. Please try again.');
+    } finally {
+      setLocalLoading(false);
     }
   };
 
-  const handleDeleteBook = (id) => {
-    if (window.confirm('Are you sure you want to delete this book?')) {
-      setBooks(books.filter(book => book.id !== id));
-      setSelectedBooks(selectedBooks.filter(bookId => bookId !== id));
+  const handleDeleteBook = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this book?')) {
+      return;
+    }
+
+    try {
+      setLocalLoading(true);
+      
+      if (booksAPI && booksAPI.deleteBook) {
+        await booksAPI.deleteBook(id);
+        await handleRefreshBooks();
+      } else {
+        setBooks(prev => prev.filter(book => book.id !== id));
+        setSelectedBooks(prev => prev.filter(bookId => bookId !== id));
+        setTotalItems(prev => prev - 1);
+      }
+    } catch (error) {
+      console.error('Failed to delete book:', error);
+      setLocalError('Failed to delete book. Please try again.');
+    } finally {
+      setLocalLoading(false);
     }
   };
 
   const handleSelectAll = (e) => {
+    const currentPageBooks = getCurrentPageBooks();
     if (e.target.checked) {
-      setSelectedBooks(books.map(book => book.id));
+      setSelectedBooks(currentPageBooks.map(book => book.id));
     } else {
       setSelectedBooks([]);
     }
@@ -273,22 +188,141 @@ const BooksManagement = () => {
     }
   };
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (selectedBooks.length === 0) return;
     
-    if (window.confirm(`Are you sure you want to delete ${selectedBooks.length} selected book(s)?`)) {
-      setBooks(books.filter(book => !selectedBooks.includes(book.id)));
-      setSelectedBooks([]);
+    if (!window.confirm(`Are you sure you want to delete ${selectedBooks.length} selected book(s)?`)) {
+      return;
+    }
+
+    try {
+      setLocalLoading(true);
+      
+      if (booksAPI && booksAPI.deleteBook) {
+        await Promise.all(selectedBooks.map(id => booksAPI.deleteBook(id)));
+        await handleRefreshBooks();
+      } else {
+        setBooks(prev => prev.filter(book => !selectedBooks.includes(book.id)));
+        setSelectedBooks([]);
+        setTotalItems(prev => prev - selectedBooks.length);
+      }
+    } catch (error) {
+      console.error('Failed to delete selected books:', error);
+      setLocalError('Failed to delete selected books. Please try again.');
+    } finally {
+      setLocalLoading(false);
     }
   };
 
-  // Filter books based on search term
-  const filteredBooks = books.filter(book => 
-    book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    book.isbn.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    book.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleRefreshBooks = async () => {
+    try {
+      setLocalLoading(true);
+      setLocalError(null);
+      setSelectedBooks([]);
+      
+      // Reset to first page and reload
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        // Force reload by calling API again
+        if (booksAPI && booksAPI.getBooks) {
+          const params = {
+            page: currentPage,
+            per_page: itemsPerPage,
+            search: searchTerm
+          };
+          const response = await booksAPI.getBooks(params);
+          if (response.books) {
+            setBooks(response.books);
+            setTotalItems(response.pagination?.total || response.books.length);
+            setTotalPages(response.pagination?.pages || 1);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh books:', error);
+      setLocalError('Failed to refresh books. Please try again.');
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  // Filter books based on search term (for local filtering when API doesn't support search)
+  const filteredBooks = books.filter(book => {
+    if (!book) return false;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (book.title?.toLowerCase() || '').includes(searchLower) ||
+      (book.author?.toLowerCase() || '').includes(searchLower) ||
+      (book.isbn?.toLowerCase() || '').includes(searchLower) ||
+      (book.category?.toLowerCase() || '').includes(searchLower) ||
+      (book.genre?.toLowerCase() || '').includes(searchLower)
+    );
+  });
+
+  // Get current page books (for local pagination when API doesn't support it)
+  const getCurrentPageBooks = () => {
+    if (booksAPI && booksAPI.getBooks) {
+      // API handles pagination
+      return books;
+    } else {
+      // Local pagination
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      return filteredBooks.slice(startIndex, endIndex);
+    }
+  };
+
+  // Calculate stats
+  const totalBooks = books.length;
+  const outOfStock = books.filter(book => book.stock === 0 || book.stock_quantity === 0).length;
+  const lowStock = books.filter(book => (book.stock > 0 && book.stock < 10) || (book.stock_quantity > 0 && book.stock_quantity < 10)).length;
+  const bestsellers = books.filter(book => book.bestseller).length;
+
+  // Pagination controls
+  const goToFirstPage = () => setCurrentPage(1);
+  const goToLastPage = () => setCurrentPage(totalPages);
+  const goToPreviousPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
+  const goToNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  // Show loading state
+  if (isLoading || localLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading books...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error || localError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md p-8">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Books</h2>
+          <p className="text-gray-600 mb-4">{error || localError}</p>
+          <button
+            onClick={handleRefreshBooks}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center mx-auto"
+          >
+            <RefreshCw size={20} className="mr-2" />
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const currentPageBooks = getCurrentPageBooks();
+  const displayTotalItems = booksAPI && booksAPI.getBooks ? totalItems : filteredBooks.length;
 
   return (
     <div className="space-y-6">
@@ -296,9 +330,19 @@ const BooksManagement = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Books Management</h1>
-          <p className="text-gray-600">Manage your bookstore inventory and listings</p>
+          <p className="text-gray-600">
+            {displayTotalItems} books in inventory • Page {currentPage} of {totalPages}
+          </p>
         </div>
         <div className="flex items-center space-x-3">
+          <button 
+            onClick={handleRefreshBooks}
+            className="px-4 py-2 border rounded-lg hover:bg-gray-50 transition flex items-center"
+            disabled={localLoading}
+          >
+            <RefreshCw size={20} className={`mr-2 ${localLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
           <button className="px-4 py-2 border rounded-lg hover:bg-gray-50 transition flex items-center">
             <Download size={20} className="mr-2" />
             Export
@@ -310,6 +354,7 @@ const BooksManagement = () => {
           <button 
             onClick={() => handleOpenModal('add')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center"
+            disabled={localLoading}
           >
             <Plus size={20} className="mr-2" />
             Add New Book
@@ -323,7 +368,7 @@ const BooksManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Books</p>
-              <p className="text-2xl font-bold text-gray-900">{books.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{totalBooks}</p>
             </div>
             <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
               <BookOpen size={24} />
@@ -334,9 +379,7 @@ const BooksManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Out of Stock</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {books.filter(book => book.stock === 0).length}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{outOfStock}</p>
             </div>
             <div className="p-3 bg-red-100 text-red-600 rounded-lg">
               <BookOpen size={24} />
@@ -347,9 +390,7 @@ const BooksManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Low Stock</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {books.filter(book => book.stock > 0 && book.stock < 10).length}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{lowStock}</p>
             </div>
             <div className="p-3 bg-yellow-100 text-yellow-600 rounded-lg">
               <BookOpen size={24} />
@@ -360,9 +401,7 @@ const BooksManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Bestsellers</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {books.filter(book => book.bestseller).length}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{bestsellers}</p>
             </div>
             <div className="p-3 bg-green-100 text-green-600 rounded-lg">
               <BookOpen size={24} />
@@ -378,29 +417,36 @@ const BooksManagement = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Search books by title, author, or ISBN..."
+              placeholder="Search books by title, author, ISBN, or category..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg"
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
               <Filter size={20} className="text-gray-400" />
-              <select className="border rounded-lg px-3 py-2">
-                <option>All Categories</option>
-                <option>Fiction</option>
-                <option>Non-Fiction</option>
-                <option>Science Fiction</option>
-                <option>Mystery & Thriller</option>
+              <select className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All Categories</option>
+                <option value="fiction">Fiction</option>
+                <option value="non-fiction">Non-Fiction</option>
+                <option value="science-fiction">Science Fiction</option>
+                <option value="mystery-thriller">Mystery & Thriller</option>
               </select>
             </div>
             <div className="flex items-center space-x-2">
-              <select className="border rounded-lg px-3 py-2">
-                <option>All Status</option>
-                <option>Published</option>
-                <option>Draft</option>
-                <option>Out of Stock</option>
+              <select 
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="5">5 per page</option>
+                <option value="10">10 per page</option>
+                <option value="20">20 per page</option>
+                <option value="50">50 per page</option>
               </select>
             </div>
             <div className="flex border rounded-lg overflow-hidden">
@@ -438,15 +484,37 @@ const BooksManagement = () => {
             <button 
               onClick={handleDeleteSelected}
               className="text-red-600 hover:text-red-700 font-medium"
+              disabled={localLoading}
             >
-              Delete Selected
+              {localLoading ? 'Deleting...' : 'Delete Selected'}
             </button>
           </div>
         </div>
       )}
 
+      {/* No Books Message */}
+      {currentPageBooks.length === 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+          <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No books found</h3>
+          <p className="text-gray-600 mb-4">
+            {searchTerm ? `No books match your search for "${searchTerm}"` : 'No books in inventory'}
+          </p>
+          <button
+            onClick={() => {
+              setSearchTerm('');
+              handleOpenModal('add');
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition inline-flex items-center"
+          >
+            <Plus size={20} className="mr-2" />
+            Add Your First Book
+          </button>
+        </div>
+      )}
+
       {/* Books Display - Table View */}
-      {viewMode === 'table' ? (
+      {currentPageBooks.length > 0 && viewMode === 'table' && (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -455,7 +523,7 @@ const BooksManagement = () => {
                   <th className="px-6 py-3 text-left">
                     <input
                       type="checkbox"
-                      checked={selectedBooks.length === filteredBooks.length && filteredBooks.length > 0}
+                      checked={selectedBooks.length === currentPageBooks.length && currentPageBooks.length > 0}
                       onChange={handleSelectAll}
                       className="rounded border-gray-300"
                     />
@@ -470,7 +538,7 @@ const BooksManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredBooks.map((book) => (
+                {currentPageBooks.map((book) => (
                   <tr key={book.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <input
@@ -483,63 +551,74 @@ const BooksManagement = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
-                          <img 
-                            src={book.imageUrl} 
-                            alt={book.title}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
+                          {book.image_url || book.imageUrl ? (
+                            <img 
+                              src={book.image_url || book.imageUrl} 
+                              alt={book.title}
+                              className="w-full h-full object-cover rounded-lg"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400';
+                              }}
+                            />
+                          ) : (
+                            <BookOpen size={20} className="text-gray-400" />
+                          )}
                         </div>
                         <div>
-                          <div className="font-medium text-gray-900">{book.title}</div>
+                          <div className="font-medium text-gray-900 line-clamp-1">{book.title}</div>
                           <div className="text-sm text-gray-500">{book.author}</div>
-                          <div className="text-xs text-gray-400">{book.isbn}</div>
+                          <div className="text-xs text-gray-400">{book.isbn || 'No ISBN'}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                        {book.category}
+                        {book.categories.map((cat)=> cat.name).join(', ') || book.genre || 'Uncategorized'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div>
                         <span className="font-medium">
-                          ${book.discountPrice ? book.discountPrice.toFixed(2) : book.price.toFixed(2)}
+                          KES{book.sale_price ? (book.sale_price.toFixed(2) * 130).toFixed(1) : (book.list_price?.toFixed(2) * 130).toFixed(1) || '0.00'}
                         </span>
-                        {book.discountPrice && (
+                        {book.sale_price && book.list_price && (
                           <span className="ml-2 text-sm text-gray-400 line-through">
-                            ${book.price.toFixed(2)}
+                            KES{(book.list_price.toFixed(2) * 130).toFixed(1)}
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <span className={book.stock < 10 ? 'text-red-600 font-medium' : 'text-gray-900'}>
-                          {book.stock}
+                        <span className={book.stock_quantity < 10 ? 'text-red-600 font-medium' : 'text-gray-900'}>
+                          {book.stock_quantity || book.stock || 0}
                         </span>
-                        {book.stock < 10 && book.stock > 0 && (
+                        {book.stock_quantity > 0 && book.stock_quantity < 10 && (
                           <span className="ml-2 text-xs text-red-600">Low Stock</span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        book.status === 'Published' ? 'bg-green-100 text-green-800' :
-                        book.status === 'Out of Stock' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
+                        (book.status === 'Published' || book.status === 'published') ? 'bg-green-100 text-green-800' :
+                        (book.status === 'Out of Stock' || book.stock_quantity === 0) ? 'bg-red-100 text-red-800' :
+                        book.status === 'Draft' ? 'bg-gray-100 text-gray-800' :
+                        'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {book.status}
+                        {book.status || (book.stock_quantity === 0 ? 'Out of Stock' : 'Published')}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <span className="font-medium">{book.sales}</span>
-                        <div className="ml-2 flex items-center">
-                          <span className={`text-xs ${book.rating >= 4 ? 'text-green-600' : 'text-yellow-600'}`}>
-                            {book.rating}★
-                          </span>
-                        </div>
+                        <span className="font-medium">{book.total_sold || book.sales || 0}</span>
+                        {(book.average_rating || book.rating) && (
+                          <div className="ml-2 flex items-center">
+                            <span className={`text-xs ${(book.average_rating || book.rating) >= 4 ? 'text-green-600' : 'text-yellow-600'}`}>
+                              {(book.average_rating || book.rating)?.toFixed(1)}★
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -562,11 +641,9 @@ const BooksManagement = () => {
                           onClick={() => handleDeleteBook(book.id)}
                           className="p-1 text-gray-400 hover:text-red-600 transition"
                           title="Delete"
+                          disabled={localLoading}
                         >
                           <Trash2 size={18} />
-                        </button>
-                        <button className="p-1 text-gray-400 hover:text-gray-600 transition">
-                          <MoreVertical size={18} />
                         </button>
                       </div>
                     </td>
@@ -576,116 +653,297 @@ const BooksManagement = () => {
             </table>
           </div>
 
-          {/* Pagination */}
-          <div className="px-6 py-4 border-t flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              Showing <span className="font-medium">1</span> to <span className="font-medium">{filteredBooks.length}</span> of{' '}
-              <span className="font-medium">{books.length}</span> books
+          {/* Pagination Controls */}
+          <div className="px-6 py-4 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-700">
+                Showing <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+                <span className="font-medium">
+                  {Math.min(currentPage * itemsPerPage, displayTotalItems)}
+                </span> of{' '}
+                <span className="font-medium">{displayTotalItems}</span> books
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-700 mr-2">Show:</span>
+                <select 
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border rounded px-2 py-1 text-sm"
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                </select>
+                <span className="text-sm text-gray-700 ml-2">per page</span>
+              </div>
             </div>
+            
             <div className="flex items-center space-x-2">
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">Previous</button>
-              <button className="px-3 py-1 bg-blue-600 text-white rounded">1</button>
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">2</button>
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">3</button>
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">Next</button>
+              <button
+                onClick={goToFirstPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                title="First page"
+              >
+                <ChevronsLeft size={20} />
+              </button>
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                title="Previous page"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              
+              {/* Page numbers */}
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  if (pageNum < 1 || pageNum > totalPages) return null;
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-1 rounded ${currentPage === pageNum ? 'bg-blue-600 text-white' : 'border hover:bg-gray-50'}`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                
+                {totalPages > 5 && currentPage < totalPages - 2 && (
+                  <>
+                    <span className="px-2">...</span>
+                    <button
+                      onClick={() => setCurrentPage(totalPages)}
+                      className="px-3 py-1 border rounded hover:bg-gray-50"
+                    >
+                      {totalPages}
+                    </button>
+                  </>
+                )}
+              </div>
+              
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                title="Next page"
+              >
+                <ChevronRight size={20} />
+              </button>
+              <button
+                onClick={goToLastPage}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                title="Last page"
+              >
+                <ChevronsRight size={20} />
+              </button>
             </div>
           </div>
         </div>
-      ) : (
-        // Grid View
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredBooks.map((book) => (
-            <div key={book.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-              <div className="relative">
-                <div className="h-48 bg-gray-100 overflow-hidden">
-                  <img
-                    src={book.imageUrl}
-                    alt={book.title}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-                {book.featured && (
-                  <div className="absolute top-3 left-3 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
-                    Featured
-                  </div>
-                )}
-                {book.bestseller && (
-                  <div className="absolute top-3 right-3 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
-                    Bestseller
-                  </div>
-                )}
-                {book.stock === 0 && (
-                  <div className="absolute bottom-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
-                    Out of Stock
-                  </div>
-                )}
-              </div>
+      )}
 
-              <div className="p-4">
-                <div className="mb-3">
-                  <h3 className="font-semibold text-gray-900 line-clamp-1">{book.title}</h3>
-                  <p className="text-sm text-gray-600">{book.author}</p>
-                  <div className="flex items-center mt-1">
-                    <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                      {book.category}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <svg
-                        key={i}
-                        className={`w-4 h-4 ${i < Math.floor(book.rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                  </div>
-                  <span className="text-sm text-gray-600">{book.rating}</span>
-                  <span className="text-sm text-gray-400">({book.sales})</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xl font-bold text-gray-900">
-                      ${book.discountPrice ? book.discountPrice.toFixed(2) : book.price.toFixed(2)}
-                    </p>
-                    {book.discountPrice && (
-                      <p className="text-sm text-gray-400 line-through">${book.price.toFixed(2)}</p>
+      {/* Books Display - Grid View */}
+      {currentPageBooks.length > 0 && viewMode === 'grid' && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {currentPageBooks.map((book) => (
+              <div key={book.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <div className="relative">
+                  <div className="h-48 bg-gray-100 overflow-hidden">
+                    {book.image_url || book.imageUrl ? (
+                      <img
+                        src={book.image_url || book.imageUrl}
+                        alt={book.title}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <BookOpen size={48} className="text-gray-300" />
+                      </div>
                     )}
                   </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => handleOpenModal('view', book)}
-                      className="p-2 text-gray-600 hover:text-blue-600 transition"
-                      title="View Details"
-                    >
-                      <Eye size={20} />
-                    </button>
-                    <button 
-                      onClick={() => handleOpenModal('edit', book)}
-                      className="p-2 text-gray-600 hover:text-green-600 transition"
-                      title="Edit"
-                    >
-                      <Edit size={20} />
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteBook(book.id)}
-                      className="p-2 text-gray-600 hover:text-red-600 transition"
-                      title="Delete"
-                    >
-                      <Trash2 size={20} />
-                    </button>
+                  {book.featured && (
+                    <div className="absolute top-3 left-3 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+                      Featured
+                    </div>
+                  )}
+                  {book.bestseller && (
+                    <div className="absolute top-3 right-3 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
+                      Bestseller
+                    </div>
+                  )}
+                  {(book.stock_quantity === 0 || book.stock === 0) && (
+                    <div className="absolute bottom-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
+                      Out of Stock
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4">
+                  <div className="mb-3">
+                    <h3 className="font-semibold text-gray-900 line-clamp-1">{book.title}</h3>
+                    <p className="text-sm text-gray-600">{book.author}</p>
+                    <div className="flex items-center mt-1">
+                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+                        {book.category || book.genre || 'Uncategorized'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {(book.average_rating || book.rating) && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <svg
+                            key={i}
+                            className={`w-4 h-4 ${i < Math.floor(book.average_rating || book.rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="text-sm text-gray-600">{(book.average_rating || book.rating)?.toFixed(1)}</span>
+                      <span className="text-sm text-gray-400">({book.total_sold || book.sales || 0})</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xl font-bold text-gray-900">
+                        ${book.sale_price ? book.sale_price.toFixed(2) : book.list_price?.toFixed(2) || '0.00'}
+                      </p>
+                      {book.sale_price && book.list_price && (
+                        <p className="text-sm text-gray-400 line-through">${book.list_price.toFixed(2)}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleOpenModal('view', book)}
+                        className="p-2 text-gray-600 hover:text-blue-600 transition"
+                        title="View Details"
+                      >
+                        <Eye size={20} />
+                      </button>
+                      <button 
+                        onClick={() => handleOpenModal('edit', book)}
+                        className="p-2 text-gray-600 hover:text-green-600 transition"
+                        title="Edit"
+                      >
+                        <Edit size={20} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteBook(book.id)}
+                        className="p-2 text-gray-600 hover:text-red-600 transition"
+                        title="Delete"
+                        disabled={localLoading}
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+          
+          {/* Pagination for Grid View */}
+          <div className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Showing <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+              <span className="font-medium">
+                {Math.min(currentPage * itemsPerPage, displayTotalItems)}
+              </span> of{' '}
+              <span className="font-medium">{displayTotalItems}</span> books
             </div>
-          ))}
-        </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={goToFirstPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                title="First page"
+              >
+                <ChevronsLeft size={20} />
+              </button>
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                title="Previous page"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  if (pageNum < 1 || pageNum > totalPages) return null;
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-1 rounded ${currentPage === pageNum ? 'bg-blue-600 text-white' : 'border hover:bg-gray-50'}`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                title="Next page"
+              >
+                <ChevronRight size={20} />
+              </button>
+              <button
+                onClick={goToLastPage}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                title="Last page"
+              >
+                <ChevronsRight size={20} />
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Book Modal */}
@@ -695,6 +953,7 @@ const BooksManagement = () => {
         mode={modalMode}
         initialData={selectedBook}
         onSave={handleSaveBook}
+        isLoading={localLoading}
       />
     </div>
   );

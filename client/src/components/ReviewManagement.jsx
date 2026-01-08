@@ -1,245 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState} from 'react';
 import { 
   Search, Filter, Check, X, Edit, Trash2, Eye, MoreVertical, 
   Star, User, Calendar, BookOpen, AlertCircle, RefreshCw,
   ChevronDown, ChevronUp, MessageSquare, ThumbsUp, ThumbsDown,
-  ArrowUpDown, Download, StarHalf
+  ArrowUpDown, Download, StarHalf, Loader2
 } from 'lucide-react';
 import ReviewModal from './ReviewModal';
-
+import { useBookStore } from './BookstoreContext';
 
 const ReviewsManagement = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedReviews, setSelectedReviews] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('view');
   const [selectedReview, setSelectedReview] = useState(null);
   const [expandedReview, setExpandedReview] = useState(null);
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [isAddingResponse, setIsAddingResponse] = useState(null);
+  const [responseContent, setResponseContent] = useState('');
 
-  // Sample reviews data
-  const [reviews, setReviews] = useState([
-    {
-      id: 1,
-      book: {
-        id: 101,
-        title: 'The Silent Patient',
-        author: 'Alex Michaelides',
-        image: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400'
-      },
-      customer: {
-        id: 201,
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100'
-      },
-      rating: 5,
-      title: 'Absolutely Gripping!',
-      content: 'This book kept me on the edge of my seat from start to finish. The plot twists were incredible and I never saw the ending coming. Highly recommend to any thriller lover!',
-      status: 'approved',
-      helpfulCount: 24,
-      unhelpfulCount: 2,
-      verifiedPurchase: true,
-      createdAt: '2024-03-15T14:30:00',
-      updatedAt: '2024-03-15T14:30:00',
-      response: {
-        adminName: 'Sarah Johnson',
-        content: 'Thank you for your detailed review! We\'re glad you enjoyed the unexpected twists.',
-        createdAt: '2024-03-16T10:15:00'
-      }
-    },
-    {
-      id: 2,
-      book: {
-        id: 102,
-        title: 'Atomic Habits',
-        author: 'James Clear',
-        image: 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?w=400'
-      },
-      customer: {
-        id: 202,
-        name: 'Jane Smith',
-        email: 'jane.smith@example.com',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100'
-      },
-      rating: 4,
-      title: 'Practical and Insightful',
-      content: 'A great book with actionable advice. The concepts are explained clearly with real-world examples. Changed my approach to building habits.',
-      status: 'approved',
-      helpfulCount: 18,
-      unhelpfulCount: 1,
-      verifiedPurchase: true,
-      createdAt: '2024-03-12T09:15:00',
-      updatedAt: '2024-03-12T09:15:00',
-      response: null
-    },
-    {
-      id: 3,
-      book: {
-        id: 103,
-        title: 'Project Hail Mary',
-        author: 'Andy Weir',
-        image: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400'
-      },
-      customer: {
-        id: 203,
-        name: 'Robert Johnson',
-        email: 'robert.j@example.com',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'
-      },
-      rating: 3,
-      title: 'Good but predictable',
-      content: 'The science was interesting but I found the plot predictable compared to The Martian. Still an enjoyable read.',
-      status: 'pending',
-      helpfulCount: 8,
-      unhelpfulCount: 3,
-      verifiedPurchase: true,
-      createdAt: '2024-03-10T16:45:00',
-      updatedAt: '2024-03-10T16:45:00',
-      response: null
-    },
-    {
-      id: 4,
-      book: {
-        id: 104,
-        title: 'The Midnight Library',
-        author: 'Matt Haig',
-        image: 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=400'
-      },
-      customer: {
-        id: 204,
-        name: 'Emily Davis',
-        email: 'emily.davis@example.com',
-        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100'
-      },
-      rating: 2,
-      title: 'Overhyped',
-      content: 'I was really looking forward to this book based on the reviews, but found it repetitive and the message heavy-handed.',
-      status: 'rejected',
-      helpfulCount: 5,
-      unhelpfulCount: 12,
-      verifiedPurchase: true,
-      createdAt: '2024-03-08T11:20:00',
-      updatedAt: '2024-03-08T11:20:00',
-      response: {
-        adminName: 'Sarah Johnson',
-        content: 'We appreciate your honest feedback. Every reader\'s experience is unique.',
-        createdAt: '2024-03-09T14:30:00'
-      }
-    },
-    {
-      id: 5,
-      book: {
-        id: 105,
-        title: 'Dune',
-        author: 'Frank Herbert',
-        image: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400'
-      },
-      customer: {
-        id: 205,
-        name: 'Michael Brown',
-        email: 'michael.b@example.com',
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100'
-      },
-      rating: 5,
-      title: 'Timeless Classic',
-      content: 'Even after all these years, Dune remains one of the most epic sci-fi novels ever written. The world-building is unparalleled.',
-      status: 'approved',
-      helpfulCount: 42,
-      unhelpfulCount: 2,
-      verifiedPurchase: false,
-      createdAt: '2024-03-05T14:10:00',
-      updatedAt: '2024-03-05T14:10:00',
-      response: null
-    },
-    {
-      id: 6,
-      book: {
-        id: 106,
-        title: 'The Hobbit',
-        author: 'J.R.R. Tolkien',
-        image: 'https://images.unsplash.com/photo-1621351183012-e2f9972dd9bf?w=400'
-      },
-      customer: {
-        id: 206,
-        name: 'Sarah Wilson',
-        email: 'sarah.wilson@example.com',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
-      },
-      rating: 4,
-      title: 'Charming Adventure',
-      content: 'A delightful introduction to Middle-earth. Perfect for both children and adults. Bilbo\'s journey is heartwarming.',
-      status: 'approved',
-      helpfulCount: 31,
-      unhelpfulCount: 1,
-      verifiedPurchase: true,
-      createdAt: '2024-03-01T10:30:00',
-      updatedAt: '2024-03-01T10:30:00',
-      response: null
-    },
-    {
-      id: 7,
-      book: {
-        id: 107,
-        title: 'Educated',
-        author: 'Tara Westover',
-        image: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400'
-      },
-      customer: {
-        id: 207,
-        name: 'David Miller',
-        email: 'david.m@example.com',
-        avatar: 'https://images.unsplash.com/photo-1507591064344-4c6ce005-128?w=100'
-      },
-      rating: 5,
-      title: 'Life-Changing Read',
-      content: 'An incredible memoir about resilience and the power of education. Couldn\'t put it down.',
-      status: 'pending',
-      helpfulCount: 15,
-      unhelpfulCount: 0,
-      verifiedPurchase: true,
-      createdAt: '2024-02-28T15:45:00',
-      updatedAt: '2024-02-28T15:45:00',
-      response: null
-    },
-    {
-      id: 8,
-      book: {
-        id: 108,
-        title: 'Sapiens',
-        author: 'Yuval Noah Harari',
-        image: 'https://images.unsplash.com/photo-1531346688376-ab6275c4725e?w=400'
-      },
-      customer: {
-        id: 208,
-        name: 'Lisa Anderson',
-        email: 'lisa.a@example.com',
-        avatar: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=100'
-      },
-      rating: 3,
-      title: 'Interesting but dense',
-      content: 'The concepts are fascinating but the writing can be dry at times. Worth reading for the ideas.',
-      status: 'approved',
-      helpfulCount: 9,
-      unhelpfulCount: 4,
-      verifiedPurchase: true,
-      createdAt: '2024-02-25T13:20:00',
-      updatedAt: '2024-02-25T13:20:00',
-      response: {
-        adminName: 'Michael Chen',
-        content: 'Thank you for your thoughtful review. We appreciate balanced feedback.',
-        createdAt: '2024-02-26T09:15:00'
-      }
-    }
-  ]);
-
-  const filterOptions = [
-    { id: 'all', label: 'All Reviews', count: reviews.length, color: 'bg-gray-500' },
-    { id: 'pending', label: 'Pending', count: reviews.filter(r => r.status === 'pending').length, color: 'bg-yellow-500' },
-    { id: 'approved', label: 'Approved', count: reviews.filter(r => r.status === 'approved').length, color: 'bg-green-500' },
-    { id: 'rejected', label: 'Rejected', count: reviews.filter(r => r.status === 'rejected').length, color: 'bg-red-500' },
-    { id: 'unanswered', label: 'Unanswered', count: reviews.filter(r => !r.response).length, color: 'bg-blue-500' }
-  ];
+  // Get context values
+  const {
+    reviews,
+    selectedReviews,
+    activeReviewFilter,
+    reviewSearchTerm,
+    reviewStats,
+    reviewFilterOptions,
+    
+    fetchReviews,
+    approveReview,
+    rejectReview,
+    updateReview,
+    deleteReview,
+    deleteSelectedReviews,
+    addAdminResponse,
+    setSelectedReviews,
+    setActiveReviewFilter,
+    setReviewSearchTerm,
+    getFilteredReviews,
+    
+    isLoading,
+    error,
+    user
+  } = useBookStore();
 
   // Modal handlers
   const handleOpenModal = (mode, review = null) => {
@@ -253,24 +54,31 @@ const ReviewsManagement = () => {
     setSelectedReview(null);
   };
 
-  const handleSaveReview = (reviewData) => {
-    if (modalMode === 'edit' && selectedReview) {
-      setReviews(reviews.map(review => 
-        review.id === selectedReview.id ? { ...reviewData, id: review.id } : review
-      ));
+  const handleSaveReview = async (reviewData) => {
+    try {
+      if (modalMode === 'edit' && selectedReview) {
+        await updateReview(selectedReview.id, reviewData);
+      }
+      handleCloseModal();
+    } catch (err) {
+      console.error('Failed to save review:', err);
     }
   };
 
-  const handleDeleteReview = (id) => {
+  const handleDeleteReview = async (id) => {
     if (window.confirm('Are you sure you want to delete this review?')) {
-      setReviews(reviews.filter(review => review.id !== id));
-      setSelectedReviews(selectedReviews.filter(reviewId => reviewId !== id));
+      try {
+        await deleteReview(id);
+      } catch (err) {
+        console.error('Failed to delete review:', err);
+      }
     }
   };
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedReviews(reviews.map(review => review.id));
+      const filtered = getFilteredReviews();
+      setSelectedReviews(filtered.map(review => review.id));
     } else {
       setSelectedReviews([]);
     }
@@ -284,51 +92,71 @@ const ReviewsManagement = () => {
     }
   };
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (selectedReviews.length === 0) return;
     
     if (window.confirm(`Are you sure you want to delete ${selectedReviews.length} selected review(s)?`)) {
-      setReviews(reviews.filter(review => !selectedReviews.includes(review.id)));
-      setSelectedReviews([]);
+      try {
+        await deleteSelectedReviews();
+      } catch (err) {
+        console.error('Failed to delete selected reviews:', err);
+      }
     }
   };
 
-  const handleApproveReview = (id) => {
-    setReviews(reviews.map(review => 
-      review.id === id ? { ...review, status: 'approved' } : review
-    ));
+  const handleApproveReview = async (id) => {
+    try {
+      await approveReview(id);
+    } catch (err) {
+      console.error('Failed to approve review:', err);
+    }
   };
 
-  const handleRejectReview = (id) => {
-    setReviews(reviews.map(review => 
-      review.id === id ? { ...review, status: 'rejected' } : review
-    ));
+  const handleRejectReview = async (id) => {
+    try {
+      await rejectReview(id);
+    } catch (err) {
+      console.error('Failed to reject review:', err);
+    }
   };
 
-  const handleToggleStatus = (id) => {
-    setReviews(reviews.map(review => 
-      review.id === id 
-        ? { ...review, status: review.status === 'approved' ? 'rejected' : 'approved' }
-        : review
-    ));
+  const handleToggleStatus = async (id, currentStatus) => {
+    try {
+      if (currentStatus === 'approved') {
+        await rejectReview(id);
+      } else {
+        await approveReview(id);
+      }
+    } catch (err) {
+      console.error('Failed to toggle review status:', err);
+    }
   };
 
-  // Filter reviews based on active filter and search term
-  const filteredReviews = reviews.filter(review => {
-    const matchesFilter = activeFilter === 'all' || 
-      (activeFilter === 'pending' && review.status === 'pending') ||
-      (activeFilter === 'approved' && review.status === 'approved') ||
-      (activeFilter === 'rejected' && review.status === 'rejected') ||
-      (activeFilter === 'unanswered' && !review.response);
+  const handleAddResponse = async (reviewId) => {
+    if (!responseContent.trim()) return;
     
-    const matchesSearch = searchTerm === '' || 
-      review.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      review.book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      review.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      review.title.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesFilter && matchesSearch;
-  });
+    try {
+      await addAdminResponse(reviewId, {
+        content: responseContent,
+        adminName: user?.name || 'Admin'
+      });
+      setIsAddingResponse(null);
+      setResponseContent('');
+    } catch (err) {
+      console.error('Failed to add response:', err);
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      await fetchReviews();
+    } catch (err) {
+      console.error('Failed to refresh reviews:', err);
+    }
+  };
+
+  // Get filtered reviews
+  const filteredReviews = getFilteredReviews();
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -340,11 +168,13 @@ const ReviewsManagement = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-US', options);
   };
 
   const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
@@ -365,16 +195,46 @@ const ReviewsManagement = () => {
             className={`${index < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
           />
         ))}
-        <span className="ml-2 text-sm font-medium">{rating.toFixed(1)}</span>
+        <span className="ml-2 text-sm font-medium">{rating?.toFixed(1) || '0.0'}</span>
       </div>
     );
   };
 
-  // Calculate statistics
-  const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
-  const pendingReviews = reviews.filter(r => r.status === 'pending').length;
-  const reviewsWithResponse = reviews.filter(r => r.response).length;
-  const helpfulReviews = reviews.reduce((sum, review) => sum + review.helpfulCount, 0);
+  // Loading and error states
+  if (isLoading && reviews.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error && reviews.length === 0) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="flex items-center text-red-700">
+          <AlertCircle className="mr-2" />
+          Error loading reviews: {error}
+        </div>
+        <button 
+          onClick={fetchReviews}
+          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'admin') {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="mx-auto text-red-500 mb-4" size={64} />
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">Admin Access Required</h3>
+        <p className="text-gray-600">You need administrator privileges to access review management.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -389,8 +249,16 @@ const ReviewsManagement = () => {
             <Download size={20} className="mr-2" />
             Export
           </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center">
-            <RefreshCw size={20} className="mr-2" />
+          <button 
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <Loader2 size={20} className="mr-2 animate-spin" />
+            ) : (
+              <RefreshCw size={20} className="mr-2" />
+            )}
             Refresh
           </button>
         </div>
@@ -402,19 +270,19 @@ const ReviewsManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90">Total Reviews</p>
-              <p className="text-2xl font-bold">{reviews.length}</p>
+              <p className="text-2xl font-bold">{reviewStats.totalReviews}</p>
             </div>
             <MessageSquare size={32} className="opacity-80" />
           </div>
           <div className="mt-4 text-sm">
-            Avg. Rating: {averageRating.toFixed(1)}/5
+            Avg. Rating: {reviewStats.averageRating.toFixed(1)}/5
           </div>
         </div>
         <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-6 rounded-lg text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90">Pending Reviews</p>
-              <p className="text-2xl font-bold">{pendingReviews}</p>
+              <p className="text-2xl font-bold">{reviewStats.pendingReviews}</p>
             </div>
             <AlertCircle size={32} className="opacity-80" />
           </div>
@@ -427,20 +295,21 @@ const ReviewsManagement = () => {
             <div>
               <p className="text-sm opacity-90">Approved</p>
               <p className="text-2xl font-bold">
-                {reviews.filter(r => r.status === 'approved').length}
+                {reviewStats.approvedReviews}
               </p>
             </div>
             <Check size={32} className="opacity-80" />
           </div>
           <div className="mt-4 text-sm">
-            {((reviews.filter(r => r.status === 'approved').length / reviews.length) * 100).toFixed(1)}% of total
+            {reviewStats.totalReviews > 0 ? 
+              ((reviewStats.approvedReviews / reviewStats.totalReviews) * 100).toFixed(1) : 0}% of total
           </div>
         </div>
         <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-lg text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90">Helpful Votes</p>
-              <p className="text-2xl font-bold">{helpfulReviews}</p>
+              <p className="text-2xl font-bold">{reviewStats.helpfulVotes}</p>
             </div>
             <ThumbsUp size={32} className="opacity-80" />
           </div>
@@ -452,15 +321,15 @@ const ReviewsManagement = () => {
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2">
-        {filterOptions.map((filter) => (
+        {reviewFilterOptions.map((filter) => (
           <button
             key={filter.id}
-            onClick={() => setActiveFilter(filter.id)}
-            className={`px-4 py-2 rounded-full flex items-center ${activeFilter === filter.id ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border'}`}
+            onClick={() => setActiveReviewFilter(filter.id)}
+            className={`px-4 py-2 rounded-full flex items-center ${activeReviewFilter === filter.id ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border'}`}
           >
             <span className={`w-2 h-2 rounded-full ${filter.color} mr-2`}></span>
             {filter.label}
-            <span className={`ml-2 px-2 py-1 rounded-full text-xs ${activeFilter === filter.id ? 'bg-white/20' : 'bg-gray-100'}`}>
+            <span className={`ml-2 px-2 py-1 rounded-full text-xs ${activeReviewFilter === filter.id ? 'bg-white/20' : 'bg-gray-100'}`}>
               {filter.count}
             </span>
           </button>
@@ -475,8 +344,8 @@ const ReviewsManagement = () => {
             <input
               type="text"
               placeholder="Search reviews by customer, book, or content..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={reviewSearchTerm}
+              onChange={(e) => setReviewSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border rounded-lg"
             />
           </div>
@@ -514,11 +383,25 @@ const ReviewsManagement = () => {
             </span>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="text-blue-600 hover:text-blue-700 font-medium flex items-center">
+            <button 
+              onClick={async () => {
+                for (const id of selectedReviews) {
+                  await approveReview(id);
+                }
+              }}
+              className="text-blue-600 hover:text-blue-700 font-medium flex items-center"
+            >
               <Check size={16} className="mr-1" />
               Approve Selected
             </button>
-            <button className="text-blue-600 hover:text-blue-700 font-medium flex items-center">
+            <button 
+              onClick={async () => {
+                for (const id of selectedReviews) {
+                  await rejectReview(id);
+                }
+              }}
+              className="text-blue-600 hover:text-blue-700 font-medium flex items-center"
+            >
               <X size={16} className="mr-1" />
               Reject Selected
             </button>
@@ -570,16 +453,16 @@ const ReviewsManagement = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="max-w-md">
-                        <h4 className="font-medium text-gray-900 mb-1">{review.title}</h4>
+                        <h4 className="font-medium text-gray-900 mb-1">{review.title || 'No Title'}</h4>
                         <p className="text-sm text-gray-600 line-clamp-2">{review.content}</p>
                         <div className="flex items-center mt-2 space-x-4">
                           <div className="flex items-center text-sm text-gray-500">
                             <ThumbsUp size={14} className="mr-1" />
-                            {review.helpfulCount}
+                            {review.helpfulCount || 0}
                           </div>
                           <div className="flex items-center text-sm text-gray-500">
                             <ThumbsDown size={14} className="mr-1" />
-                            {review.unhelpfulCount}
+                            {review.unhelpfulCount || 0}
                           </div>
                           {review.verifiedPurchase && (
                             <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
@@ -592,26 +475,32 @@ const ReviewsManagement = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden mr-3">
-                          <img 
-                            src={review.book.image} 
-                            alt={review.book.title}
-                            className="w-full h-full object-cover"
-                          />
+                          {review.book?.image ? (
+                            <img 
+                              src={review.book.image} 
+                              alt={review.book.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+                              <BookOpen size={20} />
+                            </div>
+                          )}
                         </div>
                         <div>
-                          <div className="font-medium text-sm">{review.book.title}</div>
-                          <div className="text-xs text-gray-500">{review.book.author}</div>
+                          <div className="font-medium text-sm">{review.book?.title || 'Unknown Book'}</div>
+                          <div className="text-xs text-gray-500">{review.book?.author || 'Unknown Author'}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium text-sm mr-3">
-                          {review.customer.name.charAt(0)}
+                        <div className="w-8 h-8 bg-linear-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium text-sm mr-3">
+                          {review.user?.second_name}
                         </div>
                         <div>
-                          <div className="font-medium text-sm">{review.customer.name}</div>
-                          <div className="text-xs text-gray-500">{review.customer.email}</div>
+                          <div className="font-medium text-sm">{review.user?.second_name|| 'Anonymous'}</div>
+                          <div className="text-xs text-gray-500">{ review.user?.email || ''}</div>
                         </div>
                       </div>
                     </td>
@@ -620,12 +509,12 @@ const ReviewsManagement = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(review.status)}`}>
-                        {review.status.charAt(0).toUpperCase() + review.status.slice(1)}
+                        {review.status?.charAt(0).toUpperCase() + review.status?.slice(1) || 'Unknown'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-600">
-                        {formatDate(review.createdAt)}
+                        {formatDate(review.created_at)}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -684,7 +573,7 @@ const ReviewsManagement = () => {
                             <div className="bg-white p-4 rounded-lg border">
                               <div className="mb-3">
                                 <div className="flex items-center justify-between mb-2">
-                                  <h5 className="font-medium">{review.title}</h5>
+                                  <h5 className="font-medium">{review.title || 'No Title'}</h5>
                                   {renderStars(review.rating)}
                                 </div>
                                 <p className="text-gray-700">{review.content}</p>
@@ -695,11 +584,11 @@ const ReviewsManagement = () => {
                                   <div className="flex items-center space-x-4">
                                     <div className="flex items-center">
                                       <ThumbsUp size={14} className="mr-1" />
-                                      <span>{review.helpfulCount} helpful</span>
+                                      <span>{review.helpfulCount || 0} helpful</span>
                                     </div>
                                     <div className="flex items-center">
                                       <ThumbsDown size={14} className="mr-1" />
-                                      <span>{review.unhelpfulCount} unhelpful</span>
+                                      <span>{review.unhelpfulCount || 0} unhelpful</span>
                                     </div>
                                   </div>
                                   <div className="text-gray-500">
@@ -734,7 +623,7 @@ const ReviewsManagement = () => {
                                   </>
                                 ) : (
                                   <button 
-                                    onClick={() => handleToggleStatus(review.id)}
+                                    onClick={() => handleToggleStatus(review.id, review.status)}
                                     className="col-span-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition flex items-center justify-center"
                                   >
                                     {review.status === 'approved' ? 'Mark as Rejected' : 'Mark as Approved'}
@@ -751,8 +640,38 @@ const ReviewsManagement = () => {
                                     By {review.response.adminName} • {formatDateTime(review.response.createdAt)}
                                   </div>
                                 </div>
+                              ) : isAddingResponse === review.id ? (
+                                <div className="space-y-2">
+                                  <textarea
+                                    value={responseContent}
+                                    onChange={(e) => setResponseContent(e.target.value)}
+                                    placeholder="Type your response here..."
+                                    className="w-full p-3 border rounded-lg"
+                                    rows="3"
+                                  />
+                                  <div className="flex space-x-2">
+                                    <button 
+                                      onClick={() => handleAddResponse(review.id)}
+                                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                    >
+                                      Send Response
+                                    </button>
+                                    <button 
+                                      onClick={() => {
+                                        setIsAddingResponse(null);
+                                        setResponseContent('');
+                                      }}
+                                      className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
                               ) : (
-                                <button className="w-full px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition flex items-center justify-center">
+                                <button 
+                                  onClick={() => setIsAddingResponse(review.id)}
+                                  className="w-full px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition flex items-center justify-center"
+                                >
                                   <MessageSquare size={16} className="mr-2" />
                                   Add Response
                                 </button>
@@ -775,8 +694,8 @@ const ReviewsManagement = () => {
             <MessageSquare size={64} className="mx-auto text-gray-300 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No reviews found</h3>
             <p className="text-gray-600">
-              {searchTerm 
-                ? `No reviews match "${searchTerm}"`
+              {reviewSearchTerm 
+                ? `No reviews match "${reviewSearchTerm}"`
                 : 'No reviews available for the selected filters'
               }
             </p>

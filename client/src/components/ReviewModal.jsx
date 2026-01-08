@@ -17,7 +17,7 @@ const ReviewModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSav
     if (initialData) {
       setFormData({
         status: initialData.status || '',
-        adminResponse: initialData.response?.content || ''
+        adminResponse: initialData.moderation_notes || ''
       });
     }
   }, [initialData, mode]);
@@ -42,7 +42,6 @@ const ReviewModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSav
         response: formData.adminResponse ? {
           adminName: 'Admin User',
           content: formData.adminResponse,
-          createdAt: new Date().toISOString()
         } : initialData.response
       };
 
@@ -127,12 +126,13 @@ const ReviewModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSav
                 <div className="bg-gray-50 rounded-lg p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center">
-                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4">
-                        {initialData.customer.name.charAt(0)}
+                      {console.log(initialData)}
+                      <div className="w-12 h-12 bg-linear-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4">
+                        {'Anonymous'}
                       </div>
                       <div>
-                        <h3 className="font-bold text-gray-900">{initialData.customer.name}</h3>
-                        <p className="text-sm text-gray-600">{initialData.customer.email}</p>
+                        <h3 className="font-bold text-gray-900">{'Anonymous'}</h3>
+                        <p className="text-sm text-gray-600">{initialData.user.email}</p>
                         {initialData.verifiedPurchase && (
                           <div className="flex items-center mt-1">
                             <CheckCircle size={14} className="text-green-500 mr-1" />
@@ -215,7 +215,7 @@ const ReviewModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSav
                       <div className="flex-1">
                         <p className="text-blue-800 mb-2">{initialData.response.content}</p>
                         <div className="text-sm text-blue-600">
-                          By {initialData.response.adminName} • {formatDateTime(initialData.response.createdAt)}
+                          By {initialData.response.adminName} • {formatDateTime(initialData.response.created_at)}
                         </div>
                       </div>
                     </div>

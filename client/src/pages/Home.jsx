@@ -356,7 +356,7 @@ const Home = () => {
                     <p className="text-gray-600 text-sm mb-4">{book.author}</p>
                     <div className="flex justify-between items-center">
                       <span className="text-2xl font-bold text-gray-800">
-                        ${book.sale_price || book.list_price || book.price || 19.99}
+                        KES{(book.sale_price * 130).toFixed(2) || (book.list_price * 130).toFixed(2) || 19.99}
                       </span>
                       <div className="flex gap-2">
                         <button 

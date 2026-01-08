@@ -1,9 +1,9 @@
-// In your Login component - Updated to work with BookStoreContext
+// Login component - Updated to redirect admins to admin dashboard
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Mail, Lock, Eye, EyeOff, AlertCircle,
-  BookOpen, ChevronLeft, Loader2
+  BookOpen, ChevronLeft, Loader2, Shield
 } from 'lucide-react';
 import { useBookStore } from './BookstoreContext'; // Use BookStoreContext directly
 
@@ -19,8 +19,8 @@ const Login = () => {
     rememberMe: false
   });
 
-  // Use BookStoreContext instead of AuthContext
-  const { login } = useBookStore();
+  // Use BookStoreContext
+  const { login, user } = useBookStore();
   
   // Display message from redirect
   useEffect(() => {
@@ -29,6 +29,17 @@ const Login = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location]);
+
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -43,77 +54,111 @@ const Login = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setErrors({});
+    e.preventDefault();
+    setIsLoading(true);
+    setErrors({});
 
-  // Validation
-  const newErrors = {};
-  if (!formData.email) newErrors.email = 'Email is required';
-  if (!formData.password) newErrors.password = 'Password is required';
-  else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+    // Validation
+    const newErrors = {};
+    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.password) newErrors.password = 'Password is required';
+    else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
 
-  if (Object.keys(newErrors).length > 0) {
-    setErrors(newErrors);
-    setIsLoading(false);
-    return;
-  }
-  
-  try {
-    // FIXED: Added await here
-    const response = await login(formData);
-    console.log('Login response:', response);
-    
-    // Login successful - check for pending actions
-    const pendingActions = JSON.parse(localStorage.getItem('pendingActions') || '[]');
-    const redirectAfterLogin = localStorage.getItem('redirectAfterLogin') || '/';
-    
-    // Show success message
-    if (pendingActions.length > 0) {
-      const cartActions = pendingActions.filter(a => a.type === 'addToCart');
-      const wishlistActions = pendingActions.filter(a => a.type === 'addToWishlist');
-      
-      let message = 'Login successful!';
-      if (cartActions.length > 0) {
-        message += `\nAdded ${cartActions.length} item${cartActions.length > 1 ? 's' : ''} to your cart.`;
-      }
-      if (wishlistActions.length > 0) {
-        message += `\nAdded ${wishlistActions.length} item${wishlistActions.length > 1 ? 's' : ''} to your wishlist.`;
-      }
-      alert(message);
-      
-      // Clear pending actions
-      localStorage.removeItem('pendingActions');
-      localStorage.removeItem('redirectAfterLogin');
-      
-      // Redirect to original page
-      navigate(redirectAfterLogin, { replace: true });
-    } else {
-      // No pending actions, redirect based on location state or home
-      const from = location.state?.redirectTo || 
-                  location.state?.from?.pathname || 
-                  '/';
-      navigate(from, { replace: true });
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setIsLoading(false);
+      return;
     }
     
-  } catch (error) {
-    console.error('Login error:', error);
-    setErrors({ 
-      general: error.response?.data?.message || error.message || 'Invalid email or password. Please try again.' 
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+    try {
+      const response = await login(formData);
+      console.log('Login response:', response);
+      
+      // Check if user is admin
+      if (response?.user?.role === 'admin') {
+        // Redirect admin to admin dashboard
+        const adminRedirect = location.state?.adminRedirect || '/admin';
+        
+        // Show admin welcome message
+        setTimeout(() => {
+          alert(`Welcome back, Admin ${response.user.first_name || response.user.username}!`);
+        }, 100);
+        
+        // Check for pending actions
+        const pendingActions = JSON.parse(localStorage.getItem('pendingActions') || '[]');
+        if (pendingActions.length > 0) {
+          // Clear pending actions for admin (they might want to handle differently)
+          localStorage.removeItem('pendingActions');
+          localStorage.removeItem('redirectAfterLogin');
+        }
+        
+        navigate(adminRedirect, { replace: true });
+      } else {
+        // Regular user login flow
+        const pendingActions = JSON.parse(localStorage.getItem('pendingActions') || '[]');
+        const redirectAfterLogin = localStorage.getItem('redirectAfterLogin') || '/';
+        
+        // Show success message
+        if (pendingActions.length > 0) {
+          const cartActions = pendingActions.filter(a => a.type === 'addToCart');
+          const wishlistActions = pendingActions.filter(a => a.type === 'addToWishlist');
+          
+          let message = 'Login successful!';
+          if (cartActions.length > 0) {
+            message += `\nAdded ${cartActions.length} item${cartActions.length > 1 ? 's' : ''} to your cart.`;
+          }
+          if (wishlistActions.length > 0) {
+            message += `\nAdded ${wishlistActions.length} item${wishlistActions.length > 1 ? 's' : ''} to your wishlist.`;
+          }
+          alert(message);
+          
+          // Clear pending actions
+          localStorage.removeItem('pendingActions');
+          localStorage.removeItem('redirectAfterLogin');
+          
+          // Redirect to original page
+          navigate(redirectAfterLogin, { replace: true });
+        } else {
+          // No pending actions, redirect based on location state or home
+          const from = location.state?.redirectTo || 
+                      location.state?.from?.pathname || 
+                      '/';
+          navigate(from, { replace: true });
+        }
+      }
+      
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrors({ 
+        general: error.response?.data?.message || error.message || 'Invalid email or password. Please try again.' 
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleForgotPassword = () => {
     navigate('/forgot-password');
   };
 
-  // Demo login
+  // Demo login for regular user
   const handleDemoLogin = async () => {
     setFormData({
       email: 'demo@booknook.com',
       password: 'demo123',
+      rememberMe: false
+    });
+    
+    setTimeout(() => {
+      document.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true }));
+    }, 100);
+  };
+
+  // Admin demo login
+  const handleAdminDemoLogin = async () => {
+    setFormData({
+      email: 'admin@booknook.com',
+      password: 'admin123',
       rememberMe: false
     });
     
@@ -139,14 +184,17 @@ const Login = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
             <p className="text-gray-600">Sign in to your BookTopia account</p>
             
-            {/* Pending actions notice */}
-            {localStorage.getItem('pendingActions') && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-700">
-                  You have pending actions that will be completed after login.
-                </p>
+            {/* Role indicator */}
+            <div className="mt-4 flex justify-center space-x-4">
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm">
+                <BookOpen size={12} className="mr-1" />
+                Customer Access
               </div>
-            )}
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-sm">
+                <Shield size={12} className="mr-1" />
+                Admin Access
+              </div>
+            </div>
           </div>
 
           {/* Error Message */}
@@ -157,25 +205,7 @@ const Login = () => {
             </div>
           )}
 
-          {/* Demo Login */}
-          <div className="px-8 mb-6">
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              className="w-full py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors border border-gray-300"
-            >
-              Try Demo Account
-            </button>
-            
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">Or sign in with email</span>
-              </div>
-            </div>
-          </div>
+          
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="px-8 pb-8">
@@ -279,11 +309,14 @@ const Login = () => {
 
           {/* Footer */}
           <div className="border-t border-gray-200 p-8 text-center">
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-2">
               Don't have an account?{' '}
               <Link to="/register" className="font-semibold text-blue-600 hover:text-blue-700">
                 Create an account
               </Link>
+            </p>
+            <p className="text-sm text-gray-500">
+              Admin access requires special permissions. Contact system administrator.
             </p>
           </div>
         </div>

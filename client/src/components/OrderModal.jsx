@@ -147,7 +147,7 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                 onClick={() => setActiveTab('items')}
                 className={`py-3 border-b-2 font-medium text-sm ${activeTab === 'items' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
               >
-                Items ({initialData.items})
+                Items ({""})
               </button>
               <button
                 onClick={() => setActiveTab('shipping')}
@@ -181,19 +181,19 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-gray-600">Customer Name</p>
-                          <p className="font-medium">{initialData.customer.name}</p>
+                          <p className="font-medium">{initialData.shipping_address.full_name}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Email</p>
-                          <p className="font-medium">{initialData.customer.email}</p>
+                          <p className="font-medium">{initialData.user.email}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Phone</p>
-                          <p className="font-medium">{initialData.customer.phone}</p>
+                          <p className="font-medium">{initialData.user.phone}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Customer ID</p>
-                          <p className="font-medium">CUST-{initialData.customer.id}</p>
+                          <p className="font-medium">CUST-{initialData.user.id}</p>
                         </div>
                       </div>
                     </div>
@@ -207,7 +207,7 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-gray-600">Order Date</p>
-                          <p className="font-medium">{formatDate(initialData.date)}</p>
+                          <p className="font-medium">{formatDate(initialData.created_at)}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Last Updated</p>
@@ -220,11 +220,11 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                         <div>
                           <p className="text-sm text-gray-600">Tags</p>
                           <div className="flex flex-wrap gap-2 mt-1">
-                            {initialData.tags.map((tag, index) => (
+                            {/* {initialData.tags.map((tag, index) => (
                               <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
                                 {tag}
                               </span>
-                            ))}
+                            ))} */}
                           </div>
                         </div>
                       </div>
@@ -389,7 +389,7 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Shipping</span>
-                          <span className="font-medium">{formatCurrency(initialData.shipping)}</span>
+                          <span className="font-medium">{formatCurrency(initialData.shipping_amount)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Tax</span>
@@ -397,7 +397,7 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                         </div>
                         <div className="border-t pt-3 flex justify-between">
                           <span className="font-semibold">Total</span>
-                          <span className="font-bold text-lg">{formatCurrency(initialData.total)}</span>
+                          <span className="font-bold text-lg">{formatCurrency(initialData.total_amount)}</span>
                         </div>
                       </div>
                     </div>
@@ -420,33 +420,33 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {initialData.itemsDetails.map((item) => (
+                        {initialData.items.map((item) => (
                           <tr key={item.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4">
                               <div className="flex items-center">
                                 <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden mr-4">
                                   <img 
-                                    src={item.image} 
-                                    alt={item.name}
+                                    src={item.book_image} 
+                                    alt={item.book_title}
                                     className="w-full h-full object-cover"
                                   />
                                 </div>
                                 <div>
-                                  <p className="font-medium text-gray-900">{item.name}</p>
-                                  {item.author && (
-                                    <p className="text-sm text-gray-500">{item.author}</p>
+                                  <p className="font-medium text-gray-900">{item.book_title}</p>
+                                  {item.book_author && (
+                                    <p className="text-sm text-gray-500">{item.book_author}</p>
                                   )}
                                 </div>
                               </div>
                             </td>
                             <td className="px-6 py-4">
                               <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                                {item.category}
+                                {item.category||null}
                               </span>
                             </td>
-                            <td className="px-6 py-4 font-medium">{formatCurrency(item.price)}</td>
+                            <td className="px-6 py-4 font-medium">{formatCurrency(item.unit_price)}</td>
                             <td className="px-6 py-4">{item.quantity}</td>
-                            <td className="px-6 py-4 font-bold">{formatCurrency(item.total)}</td>
+                            <td className="px-6 py-4 font-bold">{formatCurrency(item.total_price)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -463,7 +463,7 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Shipping</span>
-                          <span className="font-medium">{formatCurrency(initialData.shipping)}</span>
+                          <span className="font-medium">{formatCurrency(initialData.shipping_amount)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Tax</span>
@@ -471,7 +471,7 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                         </div>
                         <div className="border-t pt-3 flex justify-between">
                           <span className="font-semibold text-lg">Total</span>
-                          <span className="font-bold text-xl">{formatCurrency(initialData.total)}</span>
+                          <span className="font-bold text-xl">{formatCurrency(initialData.total_amount)}</span>
                         </div>
                       </div>
                     </div>
@@ -492,12 +492,12 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                       <div className="flex items-start">
                         <Home size={16} className="text-gray-400 mt-1 mr-3" />
                         <div>
-                          <p className="font-medium">{initialData.shippingAddress.name}</p>
-                          <p className="text-gray-600">{initialData.shippingAddress.street}</p>
+                          <p className="font-medium">{initialData.shipping_address.full_name}</p>
+                          <p className="text-gray-600">{initialData.shipping_address.city}</p>
                           <p className="text-gray-600">
-                            {initialData.shippingAddress.city}, {initialData.shippingAddress.state} {initialData.shippingAddress.zipCode}
+                            {initialData.shipping_address.city}, {initialData.shipping_address.state}
                           </p>
-                          <p className="text-gray-600">{initialData.shippingAddress.country}</p>
+                          <p className="text-gray-600">{initialData.shipping_address.country}</p>
                         </div>
                       </div>
                     </div>
@@ -513,12 +513,12 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                       <div className="flex items-start">
                         <Home size={16} className="text-gray-400 mt-1 mr-3" />
                         <div>
-                          <p className="font-medium">{initialData.billingAddress.name}</p>
-                          <p className="text-gray-600">{initialData.billingAddress.street}</p>
+                          <p className="font-medium">{initialData.shipping_address.full_name}</p>
+                          <p className="text-gray-600">{initialData.shipping_address.street}</p>
                           <p className="text-gray-600">
-                            {initialData.billingAddress.city}, {initialData.billingAddress.state} {initialData.billingAddress.zipCode}
+                            {initialData.shipping_address.city}, {initialData.shipping_address.state}
                           </p>
-                          <p className="text-gray-600">{initialData.billingAddress.country}</p>
+                          <p className="text-gray-600">{initialData.shipping_address.country}</p>
                         </div>
                       </div>
                     </div>
@@ -535,21 +535,21 @@ const OrderModal = ({ isOpen, onClose, mode = 'view', initialData = null, onSave
                         <Mail size={16} className="text-gray-400 mr-3" />
                         <div>
                           <p className="text-sm text-gray-600">Email</p>
-                          <p className="font-medium">{initialData.customer.email}</p>
+                          <p className="font-medium">{initialData.user.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <Phone size={16} className="text-gray-400 mr-3" />
                         <div>
                           <p className="text-sm text-gray-600">Phone</p>
-                          <p className="font-medium">{initialData.customer.phone}</p>
+                          <p className="font-medium">{initialData.user.phone}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <MapPin size={16} className="text-gray-400 mr-3" />
                         <div>
                           <p className="text-sm text-gray-600">Customer ID</p>
-                          <p className="font-medium">CUST-{initialData.customer.id}</p>
+                          <p className="font-medium">CUST-{initialData.user.id}</p>
                         </div>
                       </div>
                     </div>

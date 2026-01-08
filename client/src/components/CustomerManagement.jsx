@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Search, Filter, Download, MoreVertical, Eye, Edit, Trash2, 
   User, Mail, Phone, Calendar, DollarSign, Package, Star, 
@@ -7,6 +7,7 @@ import {
   ArrowUpRight, ArrowDownRight, Users, CreditCard
 } from 'lucide-react';
 import CustomerModal from './CustomerModal';
+import { useBookStore } from './BookstoreContext';
 
 const CustomersManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,246 +19,15 @@ const CustomersManagement = () => {
   const [expandedCustomer, setExpandedCustomer] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
 
+const {
+  adminUsers,
+  adminOrders,
+  adminPagination,
+  fetchAdminUsers
+} = useBookStore()
+  
   // Sample customers data
-  const [customers, setCustomers] = useState([
-    {
-      id: 101,
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john.doe@example.com',
-      phone: '+1 (555) 123-4567',
-      address: '123 Main Street, New York, NY 10001',
-      registrationDate: '2023-01-15',
-      lastLogin: '2024-03-18 14:30:00',
-      status: 'active',
-      emailVerified: true,
-      phoneVerified: true,
-      totalOrders: 12,
-      totalSpent: 1034.67,
-      averageOrderValue: 86.22,
-      favoriteCategory: 'Mystery & Thriller',
-      membershipTier: 'Gold',
-      notes: 'Frequent buyer, prefers hardcover books',
-      tags: ['vip', 'frequent-buyer'],
-      recentOrders: [
-        { id: 'ORD-789456', date: '2024-03-15', total: 103.16, status: 'delivered' },
-        { id: 'ORD-654321', date: '2024-02-28', total: 67.89, status: 'delivered' },
-        { id: 'ORD-123456', date: '2024-02-10', total: 45.99, status: 'delivered' }
-      ],
-      communicationPreferences: {
-        email: true,
-        sms: false,
-        newsletter: true,
-        promotions: true
-      }
-    },
-    {
-      id: 102,
-      firstName: 'Jane',
-      lastName: 'Smith',
-      email: 'jane.smith@example.com',
-      phone: '+1 (555) 987-6543',
-      address: '456 Oak Avenue, Los Angeles, CA 90001',
-      registrationDate: '2023-03-22',
-      lastLogin: '2024-03-17 09:15:00',
-      status: 'active',
-      emailVerified: true,
-      phoneVerified: false,
-      totalOrders: 8,
-      totalSpent: 567.34,
-      averageOrderValue: 70.92,
-      favoriteCategory: 'Self-Help',
-      membershipTier: 'Silver',
-      notes: 'Prefers e-books, usually buys during sales',
-      tags: ['newsletter-subscriber'],
-      recentOrders: [
-        { id: 'ORD-123456', date: '2024-03-10', total: 54.65, status: 'processing' },
-        { id: 'ORD-987654', date: '2024-02-15', total: 89.99, status: 'delivered' }
-      ],
-      communicationPreferences: {
-        email: true,
-        sms: true,
-        newsletter: true,
-        promotions: false
-      }
-    },
-    {
-      id: 103,
-      firstName: 'Robert',
-      lastName: 'Johnson',
-      email: 'robert.j@example.com',
-      phone: '+1 (555) 456-7890',
-      address: '789 Pine Road, Chicago, IL 60601',
-      registrationDate: '2023-06-10',
-      lastLogin: '2024-03-16 11:45:00',
-      status: 'active',
-      emailVerified: true,
-      phoneVerified: true,
-      totalOrders: 5,
-      totalSpent: 289.75,
-      averageOrderValue: 57.95,
-      favoriteCategory: 'Science Fiction',
-      membershipTier: 'Bronze',
-      notes: 'Collects signed editions',
-      tags: ['collector'],
-      recentOrders: [
-        { id: 'ORD-456123', date: '2024-03-05', total: 25.58, status: 'shipped' },
-        { id: 'ORD-111222', date: '2024-02-20', total: 120.45, status: 'delivered' }
-      ],
-      communicationPreferences: {
-        email: true,
-        sms: false,
-        newsletter: false,
-        promotions: false
-      }
-    },
-    {
-      id: 104,
-      firstName: 'Emily',
-      lastName: 'Davis',
-      email: 'emily.davis@example.com',
-      phone: '+1 (555) 321-0987',
-      address: '321 Elm Street, Miami, FL 33101',
-      registrationDate: '2023-08-05',
-      lastLogin: '2024-02-28 16:20:00',
-      status: 'inactive',
-      emailVerified: true,
-      phoneVerified: true,
-      totalOrders: 3,
-      totalSpent: 189.99,
-      averageOrderValue: 63.33,
-      favoriteCategory: 'Fiction',
-      membershipTier: 'Bronze',
-      notes: 'No recent activity',
-      tags: ['inactive'],
-      recentOrders: [
-        { id: 'ORD-987654', date: '2024-02-28', total: 139.63, status: 'cancelled' }
-      ],
-      communicationPreferences: {
-        email: false,
-        sms: false,
-        newsletter: false,
-        promotions: false
-      }
-    },
-    {
-      id: 105,
-      firstName: 'Michael',
-      lastName: 'Brown',
-      email: 'michael.b@example.com',
-      phone: '+1 (555) 654-3210',
-      address: '654 Maple Drive, Seattle, WA 98101',
-      registrationDate: '2024-01-20',
-      lastLogin: '2024-03-12 08:30:00',
-      status: 'active',
-      emailVerified: false,
-      phoneVerified: false,
-      totalOrders: 1,
-      totalSpent: 68.61,
-      averageOrderValue: 68.61,
-      favoriteCategory: 'Fantasy',
-      membershipTier: 'New',
-      notes: 'New customer, first purchase',
-      tags: ['new-customer'],
-      recentOrders: [
-        { id: 'ORD-654321', date: '2024-03-12', total: 68.61, status: 'pending' }
-      ],
-      communicationPreferences: {
-        email: true,
-        sms: true,
-        newsletter: true,
-        promotions: true
-      }
-    },
-    {
-      id: 106,
-      firstName: 'Sarah',
-      lastName: 'Wilson',
-      email: 'sarah.wilson@example.com',
-      phone: '+1 (555) 789-0123',
-      address: '987 Cedar Lane, Boston, MA 02101',
-      registrationDate: '2023-11-30',
-      lastLogin: '2024-03-15 10:20:00',
-      status: 'active',
-      emailVerified: true,
-      phoneVerified: true,
-      totalOrders: 15,
-      totalSpent: 2345.89,
-      averageOrderValue: 156.39,
-      favoriteCategory: 'Business',
-      membershipTier: 'Platinum',
-      notes: 'Corporate account, bulk purchases',
-      tags: ['vip', 'corporate', 'wholesale'],
-      recentOrders: [
-        { id: 'ORD-333444', date: '2024-03-14', total: 345.67, status: 'delivered' },
-        { id: 'ORD-222333', date: '2024-03-01', total: 567.89, status: 'delivered' },
-        { id: 'ORD-111999', date: '2024-02-15', total: 789.01, status: 'delivered' }
-      ],
-      communicationPreferences: {
-        email: true,
-        sms: true,
-        newsletter: true,
-        promotions: true
-      }
-    },
-    {
-      id: 107,
-      firstName: 'David',
-      lastName: 'Miller',
-      email: 'david.m@example.com',
-      phone: '+1 (555) 234-5678',
-      address: '234 Birch Street, Austin, TX 73301',
-      registrationDate: '2023-09-15',
-      lastLogin: '2024-03-10 14:15:00',
-      status: 'suspended',
-      emailVerified: true,
-      phoneVerified: true,
-      totalOrders: 2,
-      totalSpent: 145.67,
-      averageOrderValue: 72.84,
-      favoriteCategory: 'Technology',
-      membershipTier: 'Bronze',
-      notes: 'Account suspended due to payment issues',
-      tags: ['suspended'],
-      recentOrders: [],
-      communicationPreferences: {
-        email: false,
-        sms: false,
-        newsletter: false,
-        promotions: false
-      }
-    },
-    {
-      id: 108,
-      firstName: 'Lisa',
-      lastName: 'Anderson',
-      email: 'lisa.a@example.com',
-      phone: '+1 (555) 876-5432',
-      address: '876 Walnut Street, Denver, CO 80201',
-      registrationDate: '2024-02-10',
-      lastLogin: '2024-03-18 16:45:00',
-      status: 'active',
-      emailVerified: true,
-      phoneVerified: true,
-      totalOrders: 6,
-      totalSpent: 456.78,
-      averageOrderValue: 76.13,
-      favoriteCategory: 'Romance',
-      membershipTier: 'Silver',
-      notes: 'Active in book clubs',
-      tags: ['book-club'],
-      recentOrders: [
-        { id: 'ORD-888777', date: '2024-03-17', total: 89.99, status: 'processing' },
-        { id: 'ORD-777666', date: '2024-03-05', total: 67.89, status: 'delivered' }
-      ],
-      communicationPreferences: {
-        email: true,
-        sms: false,
-        newsletter: true,
-        promotions: true
-      }
-    }
-  ]);
+  const [customers, setCustomers] = useState(adminUsers);
 
   const filterOptions = [
     { id: 'all', label: 'All Customers', count: customers.length, color: 'bg-gray-500' },
@@ -265,7 +35,6 @@ const CustomersManagement = () => {
     { id: 'inactive', label: 'Inactive', count: customers.filter(c => c.status === 'inactive').length, color: 'bg-yellow-500' },
     { id: 'suspended', label: 'Suspended', count: customers.filter(c => c.status === 'suspended').length, color: 'bg-red-500' },
     { id: 'new', label: 'New', count: customers.filter(c => c.membershipTier === 'New').length, color: 'bg-blue-500' },
-    { id: 'vip', label: 'VIP', count: customers.filter(c => c.tags.includes('vip')).length, color: 'bg-purple-500' }
   ];
 
   // Modal handlers
@@ -392,8 +161,8 @@ const CustomersManagement = () => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+      currency: 'KES'
+    }).format(amount * 130);
   };
 
   const formatDate = (dateString) => {
@@ -444,7 +213,7 @@ const CustomersManagement = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-lg text-white">
+        <div className="bg-linear-to-r from-blue-500 to-blue-600 p-6 rounded-lg text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90">Total Customers</p>
@@ -457,7 +226,7 @@ const CustomersManagement = () => {
             <span>+12.5% from last month</span>
           </div>
         </div>
-        <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-lg text-white">
+        <div className="bg-linear-to-r from-green-500 to-green-600 p-6 rounded-lg text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90">Active Customers</p>
@@ -469,7 +238,7 @@ const CustomersManagement = () => {
             {((activeCustomers / totalCustomers) * 100).toFixed(1)}% of total
           </div>
         </div>
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-lg text-white">
+        <div className="bg-linear-to-r from-purple-500 to-purple-600 p-6 rounded-lg text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90">Total Revenue</p>
@@ -482,7 +251,7 @@ const CustomersManagement = () => {
             <span>+8.3% from last month</span>
           </div>
         </div>
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 rounded-lg text-white">
+        <div className="bg-linear-to-r from-orange-500 to-orange-600 p-6 rounded-lg text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90">Avg. Customer Value</p>
@@ -617,16 +386,16 @@ const CustomersManagement = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
-                          {customer.firstName.charAt(0)}{customer.lastName.charAt(0)}
+                        <div className="w-10 h-10 bg-linear-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                          {customer?.first_name.charAt(0)}{customer?.second_name.charAt(0)}
                         </div>
                         <div>
                           <div className="font-medium text-gray-900">
-                            {customer.firstName} {customer.lastName}
+                            {customer.first_name} {customer.second_name}
                           </div>
                           <div className="text-sm text-gray-500">ID: CUST-{customer.id}</div>
                           <div className="text-xs text-gray-400">
-                            Joined {formatDate(customer.registrationDate)}
+                            Joined {formatDate(customer.created_at)}
                           </div>
                         </div>
                       </div>
@@ -652,8 +421,8 @@ const CustomersManagement = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(customer.status)} flex items-center`}>
-                          {getStatusIcon(customer.status)}
-                          <span className="ml-1">{customer.status.charAt(0).toUpperCase() + customer.status.slice(1)}</span>
+                          {getStatusIcon('active')}
+                          <span className="ml-1">{'active'.charAt(0).toUpperCase() + 'active'.slice(1)}</span>
                         </span>
                       </div>
                     </td>
@@ -665,10 +434,10 @@ const CustomersManagement = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <Package size={16} className="text-gray-400 mr-2" />
-                        <span className="font-medium">{customer.totalOrders}</span>
-                        {customer.recentOrders.length > 0 && (
+                        <span className="font-medium">{customer.order_count}</span>
+                        {customer.order_count > 0 && (
                           <span className="ml-2 text-sm text-gray-500">
-                            ({customer.recentOrders.length} recent)
+                            ({customer.order_count} recent)
                           </span>
                         )}
                       </div>
@@ -678,7 +447,7 @@ const CustomersManagement = () => {
                         {formatCurrency(customer.totalSpent)}
                       </div>
                       <div className="text-sm text-gray-500">
-                        Avg: {formatCurrency(customer.averageOrderValue)}
+                        Avg: {formatCurrency(customer.totalSpent / customer.order_count)}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -751,7 +520,7 @@ const CustomersManagement = () => {
                                   <p className="text-sm text-gray-600">{customer.notes}</p>
                                 </div>
                               </div>
-                              {customer.tags.length > 0 && (
+                              {/* {customer.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
                                   {customer.tags.map((tag, index) => (
                                     <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
@@ -759,7 +528,7 @@ const CustomersManagement = () => {
                                     </span>
                                   ))}
                                 </div>
-                              )}
+                              )} */}
                             </div>
                           </div>
 

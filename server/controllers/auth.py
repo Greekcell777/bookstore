@@ -48,8 +48,10 @@ class Login(Resource):
     def get(self):
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
-        
-        return make_response(user.to_dict(), 200)
+        response = jsonify({
+            'user': user.to_dict()
+        })
+        return make_response(response, 200)
         
 
 class Logout(Resource):

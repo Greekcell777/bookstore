@@ -1,4 +1,4 @@
-const API_URL = 'https://bookstore-2-upto.onrender.com/';
+const API_URL = 'http://127.0.0.1:5555';
 
 
 function getCSRFToken() {
@@ -55,6 +55,112 @@ const apiRequest = async (endpoint, method = 'GET', data = null, requireAuth = t
   } catch (error) {
     console.error('API request failed:', error);
     throw error;
+  }
+};
+
+// services/api.js - Add this section with your other APIs
+
+// Admin API calls
+export const adminAPI = {
+  // ================= DASHBOARD STATS =================
+  getDashboardStats: async () => {
+    console.log('Getting stats')
+    return await apiRequest('/api/admin/dashboard/stats', 'GET', null, true);
+  },
+
+  // ================= USER MANAGEMENT =================
+  getUsers: async (params = {}) => {
+    // Build query string from params
+    const queryParams = new URLSearchParams();
+    
+    // Add all parameters that exist
+    if (params.page) queryParams.append('page', params.page);
+    if (params.per_page) queryParams.append('per_page', params.per_page);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.role) queryParams.append('role', params.role);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.sort) queryParams.append('sort', params.sort);
+    if (params.order) queryParams.append('order', params.order);
+    
+    const queryString = queryParams.toString();
+    const url = `/api/admin/users${queryString ? `?${queryString}` : ''}`;
+    return await apiRequest(url, 'GET', null, true);
+  },
+
+  updateUser: async (userId, userData) => {
+    return await apiRequest(`/api/admin/users/${userId}`, 'PUT', userData, true);
+  },
+
+  // ================= ORDER MANAGEMENT =================
+  getOrders: async (params = {}) => {
+    // Build query string from params
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.per_page) queryParams.append('per_page', params.per_page);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.start_date) queryParams.append('start_date', params.start_date);
+    if (params.end_date) queryParams.append('end_date', params.end_date);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.sort) queryParams.append('sort', params.sort);
+    if (params.order) queryParams.append('order', params.order);
+    
+    const queryString = queryParams.toString();
+    const url = `/api/admin/orders${queryString ? `?${queryString}` : ''}`;
+    return await apiRequest(url, 'GET', null, true);
+  },
+
+  updateOrderStatus: async (orderId, statusData) => {
+    return await apiRequest(
+      `/api/admin/orders/${orderId}/status`, 
+      'PUT', 
+      statusData, 
+      true
+    );
+  },
+
+  // ================= REVIEW MANAGEMENT =================
+  getReviews: async (params = {}) => {
+    // Build query string from params
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.per_page) queryParams.append('per_page', params.per_page);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.book_id) queryParams.append('book_id', params.book_id);
+    if (params.user_id) queryParams.append('user_id', params.user_id);
+    if (params.sort) queryParams.append('sort', params.sort);
+    if (params.order) queryParams.append('order', params.order);
+    
+    const queryString = queryParams.toString();
+    const url = `/api/admin/reviews${queryString ? `?${queryString}` : ''}`;
+    return await apiRequest(url, 'GET', null, true);
+  },
+
+  updateReview: async (reviewId, reviewData) => {
+    return await apiRequest(
+      `/api/admin/reviews/${reviewId}`, 
+      'PUT', 
+      reviewData, 
+      true
+    );
+  },
+
+  // ================= ADDITIONAL ADMIN ENDPOINTS =================
+  
+  // Get system statistics
+  getSystemStats: async () => {
+    return await apiRequest('/api/admin/system-stats', 'GET', null, true);
+  },
+
+  // Get recent activities
+  getRecentActivities: async (limit = 50) => {
+    return await apiRequest(`/api/admin/activities?limit=${limit}`, 'GET', null, true);
+  },
+
+  // Export data
+  exportData: async (type, format = 'json') => {
+    return await apiRequest(`/api/admin/export/${type}?format=${format}`, 'GET', null, true);
   }
 };
 
@@ -230,50 +336,50 @@ export const reviewsAPI = {
 };
 
 // Admin API calls
-export const adminAPI = {
-  // Dashboard stats
-  getDashboardStats: async () => {
-    return await apiRequest('/api/admin/dashboard/stats', 'GET', null, true);
-  },
+// export const adminAPI = {
+//   // Dashboard stats
+//   getDashboardStats: async () => {
+//     return await apiRequest('/api/admin/dashboard/stats', 'GET', null, true);
+//   },
 
-  // Get all users
-  getUsers: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    const url = `/api/admin/users${queryString ? `?${queryString}` : ''}`;
-    return await apiRequest(url, 'GET', null, true);
-  },
+//   // Get all users
+//   getUsers: async (params = {}) => {
+//     const queryString = new URLSearchParams(params).toString();
+//     const url = `/api/admin/users${queryString ? `?${queryString}` : ''}`;
+//     return await apiRequest(url, 'GET', null, true);
+//   },
 
-  // Update user
-  updateUser: async (userId, userData) => {
-    return await apiRequest(`/api/admin/users/${userId}`, 'PUT', userData, true);
-  },
+//   // Update user
+//   updateUser: async (userId, userData) => {
+//     return await apiRequest(`/api/admin/users/${userId}`, 'PUT', userData, true);
+//   },
 
-  // Get all orders (admin)
-  getAllOrders: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    const url = `/api/admin/orders${queryString ? `?${queryString}` : ''}`;
-    return await apiRequest(url, 'GET', null, true);
-  },
+//   // Get all orders (admin)
+//   getAllOrders: async (params = {}) => {
+//     const queryString = new URLSearchParams(params).toString();
+//     const url = `/api/admin/orders${queryString ? `?${queryString}` : ''}`;
+//     return await apiRequest(url, 'GET', null, true);
+//   },
 
-  // Update order status
-  updateOrderStatus: async (orderId, status) => {
-    return await apiRequest(`/api/admin/orders/${orderId}/status`, 'PUT', { status }, true);
-  },
+//   // Update order status
+//   updateOrderStatus: async (orderId, status) => {
+//     return await apiRequest(`/api/admin/orders/${orderId}/status`, 'PUT', { status }, true);
+//   },
 
-  // Get all reviews (admin)
-  getAllReviews: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    const url = `/api/admin/reviews${queryString ? `?${queryString}` : ''}`;
-    return await apiRequest(url, 'GET', null, true);
-  },
+//   // Get all reviews (admin)
+//   getAllReviews: async (params = {}) => {
+//     const queryString = new URLSearchParams(params).toString();
+//     const url = `/api/admin/reviews${queryString ? `?${queryString}` : ''}`;
+//     return await apiRequest(url, 'GET', null, true);
+//   },
 
-  // Update review status
-  updateReviewStatus: async (reviewId, status, adminResponse = null) => {
-    const data = { status };
-    if (adminResponse) data.admin_response = adminResponse;
-    return await apiRequest(`/api/admin/reviews/${reviewId}`, 'PUT', data, true);
-  }
-};
+//   // Update review status
+//   updateReviewStatus: async (reviewId, status, adminResponse = null) => {
+//     const data = { status };
+//     if (adminResponse) data.admin_response = adminResponse;
+//     return await apiRequest(`/api/admin/reviews/${reviewId}`, 'PUT', data, true);
+//   }
+// };
 
 // Wishlist API calls
 export const wishlistAPI = {
