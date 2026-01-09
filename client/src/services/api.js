@@ -1,4 +1,4 @@
-const API_URL = 'http://127.0.0.1:5555';
+const API_URL = 'https://bookstore-2-upto.onrender.com/';
 
 
 function getCSRFToken() {
